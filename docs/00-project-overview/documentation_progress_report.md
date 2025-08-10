@@ -237,6 +237,40 @@ docs/
   - Auto-role detection based on context
   - Full document loading and protocol setup
 
+- **`intelligent-agent-analyzer.py`** (04-research/04-ai-research) ✨ **NEW**
+  - Intelligent agent analysis and selection system
+  - Detects running agents and analyzes their capabilities
+  - Automatically selects optimal agent for specific tasks
+  - Provides intelligent auto-configuration recommendations
+
+- **`intelligent-auto-onboarding-prompt.md`** (04-research/04-ai-research) ✨ **NEW**
+  - Ultimate intelligent onboarding prompt for new agents
+  - Analyzes running agents and selects optimal configuration
+  - Integrates intelligent agent analyzer for automatic setup
+  - Provides context-aware task assignment and optimization
+
+- **`cursor-agent-manager.ps1`** (04-research/04-ai-research) ✨ **NEW**
+  - Basic PowerShell script for Cursor agent management
+  - Detects Cursor processes and analyzes agent instances
+  - Configures optimal agent limits based on system resources
+  - Provides intelligent agent management recommendations
+  - Integrates with existing Python intelligent agent analyzer
+
+- **`cursor-integration-manager.ps1`** (04-research/04-ai-research) ✨ **NEW**
+  - Advanced PowerShell script for deep Cursor integration
+  - Enhanced agent lifecycle management and resource optimization
+  - Automatic agent scaling based on workload and system load
+  - Real-time performance tracking and optimization
+  - Configuration file management for Cursor settings
+  - Auto-management mode with intelligent resource allocation
+
+- **`cursor-integration-guide.md`** (04-research/04-ai-research) ✨ **NEW**
+  - Comprehensive guide for using Cursor integration PowerShell scripts
+  - Detailed usage instructions for both basic and advanced managers
+  - Troubleshooting guide and best practices
+  - Performance metrics explanation and optimization strategies
+  - Integration with existing multi-agent AI research systems
+
 ## 🔧 Consistency Issues (18 remaining)
 
 ### Terminology Standardization
