@@ -10,21 +10,38 @@ Viridian Football is an innovative football game engine that combines advanced e
 
 ```
 Viridian Football/
-├── docs/                           # Comprehensive documentation
-│   ├── 00-project-overview/        # Project overview and introduction
-│   ├── 01-vision-strategy/         # Vision, strategy, and master planning
-│   ├── 03-technical-architecture/  # Technical architecture and design
-│   ├── 04-research-analysis/       # Research and analysis documents
-│   ├── 05-data-models/            # Data models and schemas
-│   ├── 06-development/            # Development guidelines and processes
-│   ├── 07-governance/             # Governance and decision-making
-│   ├── 08-use-engine/             # How to use the engine
-│   └── 09-archive/                # Archived documents
-├── 02-game-design/                # Game design documents
-│   └── 01-core-gameplay/          # Core gameplay mechanics
-├── *.py                           # Python scripts for formula visualization
-├── *.png                          # Generated formula flowcharts and diagrams
-└── documentation_audit_report.md  # Documentation audit and progress report
+├── assets/                         # Project assets and resources
+│   ├── diagrams/                   # Project diagrams and flowcharts  
+│   ├── documentation/              # Documentation assets
+│   ├── formulas/                   # Formula generation scripts
+│   └── images/                     # Generated images and diagrams
+├── deployment/                     # Deployment scripts and configuration
+├── docs/                          # Comprehensive documentation
+│   ├── 00-project-overview/       # Project overview and introduction
+│   ├── 01-vision-strategy/        # Vision, strategy, and master planning
+│   ├── 02-game-design/            # Game design documents
+│   ├── 03-technical-architecture/ # Technical architecture and design
+│   ├── 04-research-analysis/      # Research and analysis documents
+│   ├── 05-data-models/           # Data models and schemas
+│   ├── 06-development/           # Development guidelines and processes
+│   ├── 07-governance/            # Governance and decision-making
+│   ├── 08-use-engine/            # USE Engine documentation
+│   └── 09-archive/               # Archived documents
+├── prototypes/                    # Prototype implementations
+│   ├── java/                      # Java prototype (Maven project)
+│   └── rust/                      # Rust prototype (Cargo project)
+├── scripts/                       # Development and automation scripts
+│   ├── agents/                    # AI agent scripts
+│   ├── analysis/                  # Analysis scripts
+│   ├── monitoring/                # Monitoring scripts
+│   ├── setup/                     # Setup and configuration scripts
+│   └── utilities/                 # Utility scripts
+├── src/                          # Main source code (Java)
+│   ├── main/java/com/viridianfootball/engine/
+│   └── test/java/com/viridianfootball/engine/
+├── tests/                        # Additional test files
+├── tools/                        # Development tools
+└── pom.xml                       # Maven configuration
 ```
 
 ## 🚀 Getting Started
@@ -56,17 +73,46 @@ Viridian Football/
 
 ## 📊 Key Features
 
-- **Engagement Formula System**: Advanced mathematical models for player and team engagement
-- **Comprehensive Documentation**: Extensive documentation covering all aspects of the project
+- **USE Engine**: Universal Sports Engine with advanced simulation capabilities
+- **Multi-Language Implementation**: Java main implementation with Rust prototypes
+- **Performance Monitoring**: Built-in metrics and benchmarking systems
+- **Comprehensive Testing**: Unit tests and performance benchmarks
 - **Modular Architecture**: Scalable and maintainable codebase
-- **Visual Documentation**: Flowcharts and diagrams for complex formulas
-- **Game Design Integration**: Seamless integration between technical and design aspects
+- **Formula Visualization**: Python scripts for generating formula diagrams
+- **Comprehensive Documentation**: Extensive documentation covering all aspects
 
 ## 🛠️ Development
 
-### Running Scripts
+### Building and Running
 
-The project includes several Python scripts for generating visual representations of formulas:
+#### Java (Main Implementation)
+```bash
+# Build the project
+mvn clean compile
+
+# Run tests
+mvn test
+
+# Package the application
+mvn package
+```
+
+#### Rust (Prototype)
+```bash
+cd prototypes/rust
+
+# Build the prototype
+cargo build --release
+
+# Run the prototype
+cargo run
+
+# Run benchmarks
+cargo bench
+```
+
+#### Formula Visualization
+The project includes Python scripts in `assets/formulas/` for generating visual representations:
 
 - `engagement_formula_image.py` - Generates engagement formula diagrams
 - `flowchart_formula_image.py` - Creates flowchart representations
