@@ -2,6 +2,16 @@
 
 ## 🚀 Quick Start for New Agents
 
+**CRITICAL**: All multi-agent processes MUST follow the orchestrator-first initialization sequence.
+
+### Mandatory Initialization Sequence
+
+#### Phase 0: Orchestrator-First Protocol
+1. **ONLY Orchestrator Agent can be created first**
+2. **Orchestrator MUST create Reviewer Agent immediately**
+3. **NO development agents until GO decision**
+4. **ALL non-coding work completed before development**
+
 ### Essential Setup
 ```bash
 # Always use timeout wrappers
@@ -23,6 +33,7 @@ memory_usage = psutil.Process().memory_info().rss / 1024 / 1024  # MB
   "status": "RUNNING|COMPLETED|FAILED|STUCK",
   "progress": "50% or description",
   "current_task": "what you're doing",
+  "initialization_phase": "REVIEW|NONCODING|GO_DECISION|DEVELOPMENT",
   "resource_usage": {"memory_mb": 512, "cpu_percent": 25}
 }
 ```
@@ -79,28 +90,49 @@ def check_resources():
 
 ## 📋 Role-Specific Requirements
 
-### Orchestrator Agent
+### Orchestrator Agent (MANDATORY FIRST)
+- ✅ First and only agent that can be created initially
+- ✅ Create Reviewer Agent as first task
 - ✅ Decompose tasks into subtasks
 - ✅ Assign tasks to appropriate agents
 - ✅ Monitor all agent health
 - ✅ Manage shared state
 - ✅ Handle agent failures
+- ✅ Enforce GO/NOGO decision gate
 
-### Engine Development Agent
+### Reviewer Agent (MANDATORY SECOND)
+- ✅ Perform comprehensive project assessment
+- ✅ Identify documentation gaps and conflicts
+- ✅ Determine required non-coding work
+- ✅ Coordinate with orchestrator for non-coding agents
+- ✅ Validate completion of all non-coding tasks
+- ✅ Provide GO/NOGO decision for development phase
+- ✅ Document all assessment results
+
+### Non-Coding Agents (CREATED DURING REVIEW PHASE)
+- ✅ Documentation Agent: Fill documentation gaps
+- ✅ Research Agent: Conduct required research
+- ✅ Specification Agent: Create missing specifications
+- ✅ Organization Agent: Improve project structure
+- ✅ Process Agent: Define workflows
+
+### Development Agents (CREATED ONLY AFTER GO DECISION)
+
+#### Engine Development Agent
 - ✅ Work on isolated git branches
 - ✅ Use timeout wrappers for builds
 - ✅ Coordinate with Data Model Agent
 - ✅ Report performance metrics
 - ✅ Maintain engine documentation
 
-### Testing Agent
+#### Testing Agent
 - ✅ Run tests in isolated containers
 - ✅ Use configurable timeouts
 - ✅ Report results in JSON format
 - ✅ Coordinate with other agents
 - ✅ Implement proper cleanup
 
-### Data Model Agent
+#### Data Model Agent
 - ✅ Use version control for schema changes
 - ✅ Coordinate with Engine Development Agent
 - ✅ Provide clear interfaces
@@ -108,6 +140,16 @@ def check_resources():
 - ✅ Report schema changes
 
 ## ⚠️ Common Pitfalls
+
+### Initialization Process
+- ❌ Create development agents before review completion
+- ✅ Follow mandatory orchestrator-first sequence
+
+- ❌ Skip project assessment phase
+- ✅ Complete comprehensive review before any coding
+
+- ❌ Proceed without GO decision
+- ✅ Wait for formal GO decision from Reviewer Agent
 
 ### Process Management
 - ❌ `subprocess.run(command)` - No timeout
@@ -163,6 +205,12 @@ def check_resources():
 5. Preserve work and restart if needed
 
 ## 📊 Success Metrics
+
+### Initialization Phase
+- Review completion: 100% of identified tasks
+- Assessment accuracy: All project gaps identified
+- GO decision timing: Within planned timeframe
+- Documentation quality: All gaps filled to standards
 
 ### Individual Agent
 - Task completion rate: 90%+
@@ -298,6 +346,12 @@ def check_resources():
 3. Review task complexity
 4. Optimize if needed
 
+### Initialization Issues
+1. Verify orchestrator is first agent
+2. Check reviewer agent creation
+3. Validate project assessment completion
+4. Confirm GO decision before development agents
+
 ---
 
-**Remember**: The key to success is implementing the system with the expectation that failures will occur and building in automated recovery mechanisms that allow the system to continue operating effectively.
+**Remember**: The key to success is implementing the system with the expectation that failures will occur and building in automated recovery mechanisms that allow the system to continue operating effectively. Always start with orchestrator-first initialization.
