@@ -1,103 +1,31 @@
 package com.viridianfootball.engine.core;
 
-import com.viridianfootball.engine.performance.PerformanceMetrics;
-import java.util.List;
-
 /**
- * Status information for the USE Engine
- * 
- * Contains current state information including running status,
- * performance metrics, and active entities.
+ * Enum representing the various states of the USE Engine
  */
-public class EngineStatus {
-    
-    private final boolean isRunning;
-    private final boolean isPaused;
-    private final PerformanceMetrics performanceMetrics;
-    private final double currentTime;
-    private final List<String> activeEntities;
+public enum EngineStatus {
+    /**
+     * Engine has been created but not yet started
+     */
+    INITIALIZED,
     
     /**
-     * Creates a new engine status
-     * 
-     * @param isRunning Whether the engine is running
-     * @param isPaused Whether the engine is paused
-     * @param performanceMetrics Current performance metrics
-     * @param currentTime Current simulation time
-     * @param activeEntities List of active entity IDs
+     * Engine is actively running simulations
      */
-    public EngineStatus(boolean isRunning, boolean isPaused, 
-                       PerformanceMetrics performanceMetrics, 
-                       double currentTime, List<String> activeEntities) {
-        this.isRunning = isRunning;
-        this.isPaused = isPaused;
-        this.performanceMetrics = performanceMetrics;
-        this.currentTime = currentTime;
-        this.activeEntities = activeEntities;
-    }
+    RUNNING,
     
     /**
-     * Checks if the engine is running
-     * 
-     * @return true if running, false otherwise
+     * Engine has been paused and can be resumed
      */
-    public boolean isRunning() {
-        return isRunning;
-    }
+    PAUSED,
     
     /**
-     * Checks if the engine is paused
-     * 
-     * @return true if paused, false otherwise
+     * Engine has been stopped and must be restarted to continue
      */
-    public boolean isPaused() {
-        return isPaused;
-    }
+    STOPPED,
     
     /**
-     * Gets the current performance metrics
-     * 
-     * @return Performance metrics
+     * Engine has encountered an error and is in an invalid state
      */
-    public PerformanceMetrics getPerformanceMetrics() {
-        return performanceMetrics;
-    }
-    
-    /**
-     * Gets the current simulation time
-     * 
-     * @return Current time in seconds
-     */
-    public double getCurrentTime() {
-        return currentTime;
-    }
-    
-    /**
-     * Gets the list of active entity IDs
-     * 
-     * @return List of active entity IDs
-     */
-    public List<String> getActiveEntities() {
-        return activeEntities;
-    }
-    
-    /**
-     * Gets the number of active entities
-     * 
-     * @return Number of active entities
-     */
-    public int getActiveEntityCount() {
-        return activeEntities != null ? activeEntities.size() : 0;
-    }
-    
-    @Override
-    public String toString() {
-        return "EngineStatus{" +
-                "isRunning=" + isRunning +
-                ", isPaused=" + isPaused +
-                ", currentTime=" + currentTime +
-                ", activeEntityCount=" + getActiveEntityCount() +
-                ", performanceMetrics=" + performanceMetrics +
-                '}';
-    }
+    ERROR
 }
