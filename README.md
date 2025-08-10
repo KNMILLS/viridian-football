@@ -10,9 +10,13 @@ Viridian Football is an innovative football game engine that combines advanced e
 
 ```
 Viridian Football/
+├── README.md                       # Main project README
+├── .gitignore                      # Git ignore rules
+├── pom.xml                         # Maven configuration
 ├── docs/                           # Comprehensive documentation
 │   ├── 00-project-overview/        # Project overview and introduction
 │   ├── 01-vision-strategy/         # Vision, strategy, and master planning
+│   ├── 02-game-design/             # Game design documents
 │   ├── 03-technical-architecture/  # Technical architecture and design
 │   ├── 04-research-analysis/       # Research and analysis documents
 │   ├── 05-data-models/            # Data models and schemas
@@ -20,11 +24,29 @@ Viridian Football/
 │   ├── 07-governance/             # Governance and decision-making
 │   ├── 08-use-engine/             # How to use the engine
 │   └── 09-archive/                # Archived documents
-├── 02-game-design/                # Game design documents
-│   └── 01-core-gameplay/          # Core gameplay mechanics
-├── *.py                           # Python scripts for formula visualization
-├── *.png                          # Generated formula flowcharts and diagrams
-└── documentation_audit_report.md  # Documentation audit and progress report
+├── src/                            # Source code
+├── scripts/                        # Development and automation scripts
+│   ├── agents/                     # Multi-agent system scripts
+│   ├── setup/                      # Setup and configuration scripts
+│   ├── tools/                      # Development tools
+│   ├── monitoring/                 # Agent monitoring scripts
+│   ├── utilities/                  # Utility scripts
+│   └── analysis/                   # Analysis scripts
+├── config/                         # Configuration files
+├── assets/                         # Static assets
+│   ├── images/                     # Images and diagrams
+│   ├── formulas/                   # Formula-related assets
+│   ├── documentation/              # Documentation assets
+│   └── diagrams/                   # Diagram assets
+├── prototypes/                     # Prototype implementations
+│   ├── java/                       # Java prototype
+│   ├── rust/                       # Rust prototype
+│   └── analysis/                   # Analysis prototypes
+├── tools/                          # Development tools
+├── build/                          # Build outputs
+├── tests/                          # Test files
+├── deployment/                     # Deployment configurations
+└── archive/                        # Archived files
 ```
 
 ## 🚀 Getting Started
@@ -66,12 +88,23 @@ Viridian Football/
 
 ### Running Scripts
 
-The project includes several Python scripts for generating visual representations of formulas:
+The project includes several Python scripts organized by function:
 
+**Formula Visualization Scripts** (in `assets/formulas/`):
 - `engagement_formula_image.py` - Generates engagement formula diagrams
 - `flowchart_formula_image.py` - Creates flowchart representations
 - `pseudocode_formula_image.py` - Generates pseudocode diagrams
 - `simple_formula_image.py` - Creates simplified formula visualizations
+
+**Agent System Scripts** (in `scripts/agents/`):
+- Multi-agent development and management scripts
+- Agent onboarding and automation tools
+
+**Development Tools** (in `scripts/tools/`):
+- Various development and automation utilities
+
+**Monitoring Scripts** (in `scripts/monitoring/`):
+- Agent monitoring and performance tracking tools
 
 ### Documentation
 
@@ -83,6 +116,13 @@ The documentation is organized into logical sections covering:
 - Development processes
 - Governance
 - Engine usage
+
+### Prototypes
+
+The project includes prototype implementations in multiple languages:
+- **Java Prototype** (`prototypes/java/`) - Core engine implementation
+- **Rust Prototype** (`prototypes/rust/`) - Performance-focused implementation
+- **Analysis Prototypes** (`prototypes/analysis/`) - Research and analysis tools
 
 ## 🤝 Contributing
 
