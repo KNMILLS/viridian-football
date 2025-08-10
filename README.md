@@ -39,7 +39,7 @@ Viridian Football/
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/yourusername/viridian-football.git
+   git clone https://github.com/KNMILLS/viridian-football.git
    cd viridian-football
    ```
 
