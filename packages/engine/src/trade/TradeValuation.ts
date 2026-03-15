@@ -7,6 +7,9 @@ import type { Player, ProgressionCurve } from '../types/player.js';
 import type { Contract } from '../types/contract.js';
 import type { DraftPick } from '../types/draft.js';
 import type { TeamRecord } from '../types/team.js';
+
+/** Minimal record for contender premium (only wins/losses used). */
+type WinsLosses = Pick<TeamRecord, 'wins' | 'losses'>;
 import type { SchemeFitResult } from '../types/coach.js';
 import { defaultCurves } from '../progression/positionCurves.js';
 import { clamp } from '../sim/RNG.js';
@@ -22,7 +25,7 @@ import { getRawPickValue, computeAgingDiscount } from './tradeValueChart.js';
 // ── Team context passed into valuation functions ────────────────────
 
 export interface ValuationTeamContext {
-  teamRecord: TeamRecord;
+  teamRecord: TeamRecord | WinsLosses;
   schemeFit?: SchemeFitResult;
   weeksUntilDeadline?: number;
 }
@@ -110,7 +113,7 @@ export function getSurplusValue(
  * Teams with winning records pay a premium for "win now" pieces.
  * Returns a multiplier from 1.0 (losing team) to CONTENDER_PREMIUM_MAX.
  */
-export function getContenderPremium(teamRecord: TeamRecord): number {
+export function getContenderPremium(teamRecord: TeamRecord | WinsLosses): number {
   const total = teamRecord.wins + teamRecord.losses;
   if (total === 0) return 1.0;
   const winPct = teamRecord.wins / total;
