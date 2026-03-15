@@ -20,6 +20,7 @@ const INTRA_CONF_PAIRINGS: [number, number][][] = [
 interface Matchup {
   home: TeamId;
   away: TeamId;
+  isDivision: boolean;
 }
 
 function teamsByDivision(teams: Team[]): Map<Division, Team[]> {
@@ -42,8 +43,8 @@ function divisionMatchups(divTeams: Team[]): Matchup[] {
   const out: Matchup[] = [];
   for (let i = 0; i < divTeams.length; i++) {
     for (let j = i + 1; j < divTeams.length; j++) {
-      out.push({ home: divTeams[i]!.id, away: divTeams[j]!.id });
-      out.push({ home: divTeams[j]!.id, away: divTeams[i]!.id });
+      out.push({ home: divTeams[i]!.id, away: divTeams[j]!.id, isDivision: true });
+      out.push({ home: divTeams[j]!.id, away: divTeams[i]!.id, isDivision: true });
     }
   }
   return out;
@@ -53,17 +54,132 @@ function crossDivRoundRobin(groupA: Team[], groupB: Team[], rng: RNG): Matchup[]
   const out: Matchup[] = [];
   for (const a of groupA) {
     for (const b of groupB) {
-      out.push(chance(rng, 0.5) ? { home: a.id, away: b.id } : { home: b.id, away: a.id });
+      out.push(
+        chance(rng, 0.5)
+          ? { home: a.id, away: b.id, isDivision: false }
+          : { home: b.id, away: a.id, isDivision: false },
+      );
     }
   }
   return out;
 }
 
 function sameFinishMatchup(a: Team, b: Team, rng: RNG): Matchup {
-  return chance(rng, 0.5) ? { home: a.id, away: b.id } : { home: b.id, away: a.id };
+  return chance(rng, 0.5)
+    ? { home: a.id, away: b.id, isDivision: false }
+    : { home: b.id, away: a.id, isDivision: false };
 }
 
-// ── Week Assignment ────────────────────────────────────────────────
+// ── Penalty Evaluator ──────────────────────────────────────────────
+//
+// Scores a candidate schedule. Zero = all constraints satisfied.
+// No pre-assigned byes — the evaluator discovers bye weeks from the
+// active bitmasks and validates them against the bye window.
+//
+// Constraint weights:
+//   10 000  team plays 2+ games in one week
+//   10 000  team has != 1 bye week
+//    5 000  bye falls outside [byeStart..byeEnd]
+//    5 000  home games not in {8, 9}
+//    5 000  division has all 4 teams on bye same week
+//    1 000  bye week has <2 or >6 teams idle
+//      500  >3 consecutive home games
+//      500  >3 consecutive away games
+//      200  >3 consecutive division games
+//      300  <2 division games after week 10
+
+const NUM_TEAMS = 32;
+const NUM_DIVS = 8;
+
+const DIV_IDX: Record<string, number> = {
+  'AFC East': 0, 'AFC North': 1, 'AFC South': 2, 'AFC West': 3,
+  'NFC East': 4, 'NFC North': 5, 'NFC South': 6, 'NFC West': 7,
+};
+
+function evaluatePenalty(
+  numGames: number,
+  weekOf: number[],
+  numWeeks: number,
+  homeI: Uint8Array,
+  awayI: Uint8Array,
+  divF: Uint8Array,
+  divOf: Uint8Array,
+  byeWindowStart: number,
+  byeWindowEnd: number,
+  act: number[],
+  hom: number[],
+  dvk: number[],
+): number {
+  let pen = 0;
+
+  for (let i = 0; i < numWeeks; i++) { act[i] = 0; hom[i] = 0; dvk[i] = 0; }
+
+  for (let g = 0; g < numGames; g++) {
+    const w = weekOf[g]!;
+    const hBit = 1 << homeI[g]!;
+    const aBit = 1 << awayI[g]!;
+    if ((act[w]! & (hBit | aBit)) !== 0) pen += 10000;
+    act[w] = (act[w]! | hBit | aBit) | 0;
+    hom[w] = (hom[w]! | hBit) | 0;
+    if (divF[g]) dvk[w] = (dvk[w]! | hBit | aBit) | 0;
+  }
+
+  // Per-team: streaks, home balance, bye discovery
+  for (let t = 0; t < NUM_TEAMS; t++) {
+    const bit = 1 << t;
+    let cH = 0;
+    let cA = 0;
+    let cD = 0;
+    let lateDv = 0;
+    let totalHome = 0;
+    let byeCount = 0;
+    let byeWeek = -1;
+
+    for (let w = 0; w < numWeeks; w++) {
+      if ((act[w]! & bit) !== 0) {
+        if ((hom[w]! & bit) !== 0) { cH++; cA = 0; totalHome++; } else { cA++; cH = 0; }
+        if ((dvk[w]! & bit) !== 0) { cD++; if (w >= 10) lateDv++; } else cD = 0;
+      } else {
+        byeCount++;
+        byeWeek = w;
+        cH = 0; cA = 0; cD = 0;
+      }
+      if (cH > 3) pen += 500;
+      if (cA > 3) pen += 500;
+      if (cD > 3) pen += 200;
+    }
+
+    if (lateDv < 2) pen += 300;
+    if (totalHome !== 8 && totalHome !== 9) pen += 5000;
+    if (byeCount !== 1) pen += 10000;
+    if (byeCount === 1 && (byeWeek < byeWindowStart || byeWeek > byeWindowEnd)) pen += 5000;
+  }
+
+  // Per-week bye distribution inside the bye window
+  for (let w = byeWindowStart; w <= byeWindowEnd; w++) {
+    let weekByes = 0;
+    const divByes = new Uint8Array(NUM_DIVS);
+    for (let t = 0; t < NUM_TEAMS; t++) {
+      if ((act[w]! & (1 << t)) === 0) {
+        weekByes++;
+        divByes[divOf[t]!] = (divByes[divOf[t]!] ?? 0) + 1;
+      }
+    }
+    if (weekByes > 0 && (weekByes < 2 || weekByes > 6)) pen += 1000;
+    for (let d = 0; d < NUM_DIVS; d++) {
+      if (divByes[d]! >= 4) pen += 5000;
+    }
+  }
+
+  return pen;
+}
+
+// ── Week Assignment (Simulated Annealing) ─────────────────────────
+//
+// No pre-assigned byes.  The greedy seeds games into all 18 weeks
+// (17 games + 1 natural gap per team), then the annealer + VND
+// polish the placement until every constraint is satisfied.
+// Bye weeks are discovered from the final active bitmasks.
 
 function assignToWeeks(
   matchups: Matchup[],
@@ -73,207 +189,188 @@ function assignToWeeks(
   teams: Team[],
   rng: RNG,
 ): { weekGames: Matchup[][]; byeTeams: TeamId[][] } {
+  const byeWindowStart = byeStart - 1;
+  const byeWindowEnd = byeEnd - 1;
+  const numGames = matchups.length;
+
+  const teamIdx = new Map<string, number>();
+  for (let i = 0; i < teams.length; i++) teamIdx.set(teams[i]!.id, i);
+
+  const teamsByI = new Array<TeamId>(teams.length);
+  for (let i = 0; i < teams.length; i++) teamsByI[teamIdx.get(teams[i]!.id)!] = teams[i]!.id;
+
+  const homeI = new Uint8Array(numGames);
+  const awayI = new Uint8Array(numGames);
+  const divF = new Uint8Array(numGames);
+  for (let g = 0; g < numGames; g++) {
+    homeI[g] = teamIdx.get(matchups[g]!.home)!;
+    awayI[g] = teamIdx.get(matchups[g]!.away)!;
+    divF[g] = matchups[g]!.isDivision ? 1 : 0;
+  }
+
+  const divOf = new Uint8Array(teams.length);
+  for (let i = 0; i < teams.length; i++) {
+    divOf[teamIdx.get(teams[i]!.id)!] = DIV_IDX[teams[i]!.division]!;
+  }
+
+  const act = new Array<number>(numWeeks);
+  const hom = new Array<number>(numWeeks);
+  const dvk = new Array<number>(numWeeks);
+
+  const evaluate = () =>
+    evaluatePenalty(numGames, weekOf, numWeeks, homeI, awayI, divF, divOf,
+                    byeWindowStart, byeWindowEnd, act, hom, dvk);
+
+  // ── Greedy seed → annealing → VND (with restarts) ─────────────
+  const MAX_RESTARTS = 5;
+  const MAX_ITER = 500_000;
+  const weekOf = new Array<number>(numGames).fill(0);
+
+  for (let restart = 0; restart < MAX_RESTARTS; restart++) {
+    // Greedy: 18 weeks available per team (17 games → 1 natural gap).
+    // No bye blocking = zero-slack is impossible = no force-placements.
+    const busy = new Array<number>(teams.length).fill(0);
+    const order = shuffle(rng, Array.from({ length: numGames }, (_, i) => i));
+    const weekArr = Array.from({ length: numWeeks }, (_, i) => i);
+
+    for (const gi of order) {
+      const h = homeI[gi]!;
+      const a = awayI[gi]!;
+      let placed = false;
+      shuffle(rng, weekArr);
+      for (const w of weekArr) {
+        const wBit = 1 << w;
+        if ((busy[h]! & wBit) !== 0 || (busy[a]! & wBit) !== 0) continue;
+        weekOf[gi] = w;
+        busy[h] = (busy[h]! | wBit) | 0;
+        busy[a] = (busy[a]! | wBit) | 0;
+        placed = true;
+        break;
+      }
+      if (!placed) weekOf[gi] = Math.floor(rng() * numWeeks);
+    }
+
+    let penalty = evaluate();
+    if (penalty === 0) break;
+
+    // Simulated annealing — Swap / Move / Venue Flip
+    let temperature = 10000;
+    for (let iter = 0; iter < MAX_ITER && penalty > 0; iter++) {
+      const roll = rng();
+
+      if (roll < 0.4) {
+        const g1 = Math.floor(rng() * numGames);
+        const g2 = Math.floor(rng() * numGames);
+        if (g1 === g2) { temperature *= 0.99998; continue; }
+        const w1 = weekOf[g1]!;
+        const w2 = weekOf[g2]!;
+        if (w1 === w2) { temperature *= 0.99998; continue; }
+        weekOf[g1] = w2;
+        weekOf[g2] = w1;
+        const np = evaluate();
+        if (np - penalty <= 0 || rng() < Math.exp(-(np - penalty) / temperature)) {
+          penalty = np;
+        } else {
+          weekOf[g1] = w1;
+          weekOf[g2] = w2;
+        }
+      } else if (roll < 0.8) {
+        const g1 = Math.floor(rng() * numGames);
+        const oldW = weekOf[g1]!;
+        const newW = Math.floor(rng() * numWeeks);
+        if (oldW === newW) { temperature *= 0.99998; continue; }
+        weekOf[g1] = newW;
+        const np = evaluate();
+        if (np - penalty <= 0 || rng() < Math.exp(-(np - penalty) / temperature)) {
+          penalty = np;
+        } else {
+          weekOf[g1] = oldW;
+        }
+      } else {
+        const g1 = Math.floor(rng() * numGames);
+        if (divF[g1]) { temperature *= 0.99998; continue; }
+        const tmpH = homeI[g1]!;
+        homeI[g1] = awayI[g1]!;
+        awayI[g1] = tmpH;
+        const np = evaluate();
+        if (np - penalty <= 0 || rng() < Math.exp(-(np - penalty) / temperature)) {
+          penalty = np;
+        } else {
+          const rv = homeI[g1]!;
+          homeI[g1] = awayI[g1]!;
+          awayI[g1] = rv;
+        }
+      }
+
+      temperature *= 0.99998;
+    }
+
+    if (penalty === 0) break;
+
+    // ── Variable Neighborhood Descent (polish) ───────────────────
+    let vndPass = 30;
+    while (vndPass-- > 0 && penalty > 0) {
+      let improved = false;
+
+      for (let g = 0; g < numGames && penalty > 0; g++) {
+        const origW = weekOf[g]!;
+        for (let w = 0; w < numWeeks; w++) {
+          if (w === origW) continue;
+          weekOf[g] = w;
+          const np = evaluate();
+          if (np < penalty) { penalty = np; improved = true; break; }
+          weekOf[g] = origW;
+        }
+      }
+
+      for (let g = 0; g < numGames && penalty > 0; g++) {
+        if (divF[g]) continue;
+        const oH = homeI[g]!;
+        const oA = awayI[g]!;
+        homeI[g] = oA;
+        awayI[g] = oH;
+        const np = evaluate();
+        if (np < penalty) { penalty = np; improved = true; } else { homeI[g] = oH; awayI[g] = oA; }
+      }
+
+      if (!improved) {
+        for (let g1 = 0; g1 < numGames && penalty > 0; g1++) {
+          let found = false;
+          for (let g2 = g1 + 1; g2 < numGames; g2++) {
+            const w1 = weekOf[g1]!;
+            const w2 = weekOf[g2]!;
+            if (w1 === w2) continue;
+            weekOf[g1] = w2;
+            weekOf[g2] = w1;
+            const np = evaluate();
+            if (np < penalty) { penalty = np; improved = true; found = true; break; }
+            weekOf[g1] = w1;
+            weekOf[g2] = w2;
+          }
+          if (found) break;
+        }
+      }
+
+      if (!improved) break;
+    }
+
+    if (penalty === 0) break;
+  }
+
+  // ── Build output: sync venues, discover byes from active masks ─
   const weekGames: Matchup[][] = Array.from({ length: numWeeks }, () => []);
+  for (let i = 0; i < numWeeks; i++) act[i] = 0;
+  for (let g = 0; g < numGames; g++) {
+    matchups[g]!.home = teamsByI[homeI[g]!]!;
+    matchups[g]!.away = teamsByI[awayI[g]!]!;
+    weekGames[weekOf[g]!]!.push(matchups[g]!);
+    act[weekOf[g]!] = (act[weekOf[g]!]! | (1 << homeI[g]!) | (1 << awayI[g]!)) | 0;
+  }
+
   const byeTeams: TeamId[][] = Array.from({ length: numWeeks }, () => []);
-  const teamWeeks = new Map<string, Set<number>>();
-  for (const t of teams) teamWeeks.set(t.id, new Set());
-
-  // Sort: most-constrained matchups first (teams with most existing games)
-  // Then process each one into the first available week
-  const pool = [...matchups];
-  shuffle(rng, pool);
-
-  // Process division games first (they have parallel edges: home-and-away)
-  const isDivGame = (m: Matchup) => {
-    const ht = teams.find((t) => t.id === m.home);
-    const at = teams.find((t) => t.id === m.away);
-    return ht && at && ht.division === at.division;
-  };
-  const divGames = pool.filter(isDivGame);
-  const otherGames = pool.filter((m) => !isDivGame(m));
-
-  const unplaced: Matchup[] = [];
-
-  for (const m of [...divGames, ...otherGames]) {
-    const hWeeks = teamWeeks.get(m.home)!;
-    const aWeeks = teamWeeks.get(m.away)!;
-
-    let bestW = -1;
-    for (let w = 0; w < numWeeks; w++) {
-      if (hWeeks.has(w) || aWeeks.has(w)) continue;
-      bestW = w;
-      break;
-    }
-
-    if (bestW >= 0) {
-      weekGames[bestW]!.push(m);
-      hWeeks.add(bestW);
-      aWeeks.add(bestW);
-    } else {
-      unplaced.push(m);
-    }
-  }
-
-  // Repair unplaced games via augmenting-path swaps
-  for (const m of unplaced) {
-    const hWeeks = teamWeeks.get(m.home)!;
-    const aWeeks = teamWeeks.get(m.away)!;
-    let placed = false;
-
-    // Helper to move a game from one week to another
-    const moveGame = (game: Matchup, from: number, to: number) => {
-      weekGames[from] = weekGames[from]!.filter((g) => g !== game);
-      teamWeeks.get(game.home)!.delete(from);
-      teamWeeks.get(game.away)!.delete(from);
-      weekGames[to]!.push(game);
-      teamWeeks.get(game.home)!.add(to);
-      teamWeeks.get(game.away)!.add(to);
-    };
-
-    // Try: find a free week for A (home), then move B's blocker out of that week
-    const freeForHome = [];
-    const freeForAway = [];
-    for (let w = 0; w < numWeeks; w++) {
-      if (!hWeeks.has(w)) freeForHome.push(w);
-      if (!aWeeks.has(w)) freeForAway.push(w);
-    }
-
-    // Direct placement
-    for (const w of freeForHome) {
-      if (!aWeeks.has(w)) {
-        weekGames[w]!.push(m);
-        hWeeks.add(w);
-        aWeeks.add(w);
-        placed = true;
-        break;
-      }
-    }
-    if (placed) continue;
-
-    // Single swap: A is free in week fA, B is busy. Move B's game out.
-    for (const fA of freeForHome) {
-      if (placed) break;
-      const blocker = weekGames[fA]!.find(
-        (g) => g.home === m.away || g.away === m.away,
-      );
-      if (!blocker) continue;
-      const bh = teamWeeks.get(blocker.home)!;
-      const ba = teamWeeks.get(blocker.away)!;
-      for (let altW = 0; altW < numWeeks; altW++) {
-        if (altW === fA) continue;
-        if (bh.has(altW) || ba.has(altW)) continue;
-        moveGame(blocker, fA, altW);
-        weekGames[fA]!.push(m);
-        hWeeks.add(fA);
-        aWeeks.add(fA);
-        placed = true;
-        break;
-      }
-    }
-    if (placed) continue;
-
-    // Single swap: B is free in week fB, A is busy. Move A's game out.
-    for (const fB of freeForAway) {
-      if (placed) break;
-      const blocker = weekGames[fB]!.find(
-        (g) => g.home === m.home || g.away === m.home,
-      );
-      if (!blocker) continue;
-      const bh = teamWeeks.get(blocker.home)!;
-      const ba = teamWeeks.get(blocker.away)!;
-      for (let altW = 0; altW < numWeeks; altW++) {
-        if (altW === fB) continue;
-        if (bh.has(altW) || ba.has(altW)) continue;
-        moveGame(blocker, fB, altW);
-        weekGames[fB]!.push(m);
-        hWeeks.add(fB);
-        aWeeks.add(fB);
-        placed = true;
-        break;
-      }
-    }
-    if (placed) continue;
-
-    // Double swap: find week fA where A free, B plays C.
-    // Move B-C to week fB where B free, A plays D.
-    // That requires: C free in fB.
-    // Then move A-D from fB to fA. That requires: D free in fA (which D might be).
-    // Alternatively: just move B-C from fA to some other week where both B,C free.
-    // Then place A-B in fA.
-    // If that doesn't work, try the reverse.
-    for (const fA of freeForHome) {
-      if (placed) break;
-      const bBlocker = weekGames[fA]!.find(
-        (g) => g.home === m.away || g.away === m.away,
-      );
-      if (!bBlocker) continue;
-
-      const bbh = teamWeeks.get(bBlocker.home)!;
-      const bba = teamWeeks.get(bBlocker.away)!;
-
-      // Can we bump bBlocker's opponent's game from some week to make room?
-      for (let midW = 0; midW < numWeeks; midW++) {
-        if (midW === fA) continue;
-        if (bbh.has(midW) && !bba.has(midW)) {
-          // bBlocker.home is busy in midW, bBlocker.away is free
-          const innerBlocker = weekGames[midW]!.find(
-            (g) => g.home === bBlocker.home || g.away === bBlocker.home,
-          );
-          if (!innerBlocker) continue;
-          const ibh = teamWeeks.get(innerBlocker.home)!;
-          const iba = teamWeeks.get(innerBlocker.away)!;
-          for (let altW = 0; altW < numWeeks; altW++) {
-            if (altW === midW || altW === fA) continue;
-            if (ibh.has(altW) || iba.has(altW)) continue;
-            moveGame(innerBlocker, midW, altW);
-            moveGame(bBlocker, fA, midW);
-            weekGames[fA]!.push(m);
-            hWeeks.add(fA);
-            aWeeks.add(fA);
-            placed = true;
-            break;
-          }
-          if (placed) break;
-        }
-        if (!bbh.has(midW) && bba.has(midW)) {
-          const innerBlocker = weekGames[midW]!.find(
-            (g) => g.home === bBlocker.away || g.away === bBlocker.away,
-          );
-          if (!innerBlocker) continue;
-          const ibh = teamWeeks.get(innerBlocker.home)!;
-          const iba = teamWeeks.get(innerBlocker.away)!;
-          for (let altW = 0; altW < numWeeks; altW++) {
-            if (altW === midW || altW === fA) continue;
-            if (ibh.has(altW) || iba.has(altW)) continue;
-            moveGame(innerBlocker, midW, altW);
-            moveGame(bBlocker, fA, midW);
-            weekGames[fA]!.push(m);
-            hWeeks.add(fA);
-            aWeeks.add(fA);
-            placed = true;
-            break;
-          }
-          if (placed) break;
-        }
-      }
-    }
-  }
-
-  const divSets = new Map<Division, Set<string>>();
-  for (const t of teams) {
-    const s = divSets.get(t.division) ?? new Set();
-    s.add(t.id);
-    divSets.set(t.division, s);
-  }
-
-  for (const t of teams) {
-    const u = teamWeeks.get(t.id)!;
-    for (let w = byeStart - 1; w <= byeEnd - 1 && w < numWeeks; w++) {
-      if (u.has(w)) continue;
-      const divIds = divSets.get(t.division)!;
-      if (byeTeams[w]!.filter((id) => divIds.has(id)).length >= 3) continue;
-      byeTeams[w]!.push(t.id);
-      break;
+  for (let w = 0; w < numWeeks; w++) {
+    for (let t = 0; t < teams.length; t++) {
+      if ((act[w]! & (1 << t)) === 0) byeTeams[w]!.push(teamsByI[t]!);
     }
   }
 
