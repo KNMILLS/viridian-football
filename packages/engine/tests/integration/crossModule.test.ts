@@ -1,6 +1,6 @@
 /**
  * Integration tests: verify that the SeasonOrchestrator correctly wires
- * all Phase 1 engine modules together through the event bus.
+ * all Phase 1 and Phase 2 engine modules together through the event bus.
  */
 
 import { describe, it, expect, beforeAll } from 'vitest';
@@ -8,8 +8,9 @@ import { generateLeague } from '../../src/league/LeagueGenerator.js';
 import { SeasonOrchestrator } from '../../src/orchestrator/SeasonOrchestrator.js';
 import { generateSchedule } from '../../src/sim/ScheduleGenerator.js';
 import { createLCG } from '../../src/sim/RNG.js';
-import type { League, WeekSchedule, Player, Team } from '../../src/types/index.js';
+import type { League, WeekSchedule, Player, Team, DraftPick } from '../../src/types/index.js';
 import type { GameEventMap } from '../../src/events/GameEvents.js';
+import { playerId, teamId, draftPickId } from '../../src/types/ids.js';
 
 /**
  * Cached schedule shared by all tests using the same seed to avoid
@@ -275,6 +276,314 @@ describe('SeasonOrchestrator', () => {
         expect(result.gameResults.length).toBeGreaterThanOrEqual(0);
       }
       expect(league.week).toBe(29);
+    });
+  });
+
+  // ── Phase 2 Integration Tests ────────────────────────────────────
+
+  describe('Phase 2: full offseason advance', () => {
+    function createOffseasonStartLeague(seed = 500): League {
+      const generated = generateLeague(seed);
+      const league = generated.league;
+      league.week = 1;
+      league.phase = 'offseason_start';
+
+      // Give teams some win/loss records for draft order
+      for (let i = 0; i < league.teams.length; i++) {
+        const team = league.teams[i]!;
+        team.record.wins = i;
+        team.record.losses = 17 - i;
+      }
+
+      return league;
+    }
+
+    it('coaching carousel fires and hires coaches', () => {
+      const league = createOffseasonStartLeague();
+      const orch = new SeasonOrchestrator(league);
+
+      // Advance to coaching_carousel (week 2)
+      orch.advanceWeek(); // week 1 → offseason_start
+      const result = orch.advanceWeek(); // week 2 → coaching_carousel
+
+      expect(result.phase).toBe('coaching_carousel');
+      expect(result.coachingChanges).toBeDefined();
+      // At minimum, teams with bad records should have coaching changes
+      const changes = result.coachingChanges!;
+      expect(Array.isArray(changes.firings)).toBe(true);
+      expect(Array.isArray(changes.hirings)).toBe(true);
+    }, 30_000);
+
+    it('combine generates draft class and runs combine', () => {
+      const league = createOffseasonStartLeague();
+      const orch = new SeasonOrchestrator(league);
+
+      // Advance to combine (week 5)
+      for (let w = 1; w < 5; w++) orch.advanceWeek();
+      const result = orch.advanceWeek(); // week 5 → combine
+
+      expect(result.phase).toBe('combine');
+      expect(result.combineResults).toBeDefined();
+      expect(result.combineResults!.prospectCount).toBeGreaterThan(0);
+      expect(result.combineResults!.combineParticipants).toBeGreaterThan(0);
+      expect(league.draftProspects.length).toBeGreaterThan(0);
+    }, 30_000);
+
+    it('free agency signs players to teams', () => {
+      const league = createOffseasonStartLeague();
+      const orch = new SeasonOrchestrator(league);
+
+      // Advance to free_agency (week 8)
+      for (let w = 1; w < 8; w++) orch.advanceWeek();
+      const result = orch.advanceWeek(); // week 8 → free_agency
+
+      expect(result.phase).toBe('free_agency');
+      expect(result.freeAgentSignings).toBeDefined();
+      // FA market depends on contract expiry, may have signings or not
+      expect(Array.isArray(result.freeAgentSignings!.signings)).toBe(true);
+    }, 30_000);
+
+    it('draft produces selections and updates rosters', () => {
+      const league = createOffseasonStartLeague();
+      const orch = new SeasonOrchestrator(league);
+
+      const playerCountBefore = league.players.length;
+
+      // Advance to draft (week 10)
+      for (let w = 1; w < 10; w++) orch.advanceWeek();
+      const result = orch.advanceWeek(); // week 10 → draft
+
+      expect(result.phase).toBe('draft');
+      expect(result.draftResults).toBeDefined();
+      expect(result.draftResults!.selections.length).toBeGreaterThan(0);
+
+      // Drafted players added to league
+      expect(league.players.length).toBeGreaterThan(playerCountBefore);
+
+      // Each selection should have valid fields
+      for (const sel of result.draftResults!.selections) {
+        expect(sel.round).toBeGreaterThanOrEqual(1);
+        expect(sel.round).toBeLessThanOrEqual(7);
+        expect(sel.overall).toBeGreaterThan(0);
+        expect(sel.teamId).toBeDefined();
+      }
+    }, 60_000);
+
+    it('post-draft signs UDFAs', () => {
+      const league = createOffseasonStartLeague();
+      const orch = new SeasonOrchestrator(league);
+
+      // Advance to post_draft (week 13)
+      for (let w = 1; w < 13; w++) orch.advanceWeek();
+      const result = orch.advanceWeek(); // week 13 → post_draft
+
+      expect(result.phase).toBe('post_draft');
+      expect(result.udfaSignings).toBeDefined();
+      // After draft, remaining prospects become UDFAs
+      expect(Array.isArray(result.udfaSignings!.signings)).toBe(true);
+      // All draft prospects should be cleared
+      expect(league.draftProspects.length).toBe(0);
+    }, 60_000);
+
+    it('training camp evaluates players', () => {
+      const league = createOffseasonStartLeague();
+      const orch = new SeasonOrchestrator(league);
+
+      // Advance to training_camp (week 17)
+      for (let w = 1; w < 17; w++) orch.advanceWeek();
+      const result = orch.advanceWeek(); // week 17 → training_camp
+
+      expect(result.phase).toBe('training_camp');
+      expect(result.trainingCampResults).toBeDefined();
+      expect(result.trainingCampResults!.teamResults.length).toBe(league.teams.length);
+      for (const tr of result.trainingCampResults!.teamResults) {
+        expect(tr.evaluationCount).toBeGreaterThan(0);
+      }
+    }, 60_000);
+
+    it('roster cuts trim rosters to 53', () => {
+      const league = createOffseasonStartLeague();
+      const orch = new SeasonOrchestrator(league);
+
+      // Advance to roster_cuts (week 23)
+      for (let w = 1; w < 23; w++) orch.advanceWeek();
+      const result = orch.advanceWeek(); // week 23 → roster_cuts
+
+      expect(result.phase).toBe('roster_cuts');
+      expect(result.rosterCuts).toBeDefined();
+      // Verify no team exceeds 53 on active roster
+      for (const team of league.teams) {
+        expect(team.roster.length).toBeLessThanOrEqual(53);
+      }
+    }, 120_000);
+
+    it('league.phase stays in sync after each advance', () => {
+      const league = createOffseasonStartLeague(501);
+      const orch = new SeasonOrchestrator(league);
+
+      const phases: string[] = [];
+      for (let w = 1; w <= 5; w++) {
+        orch.advanceWeek();
+        phases.push(league.phase);
+      }
+
+      // After advancing 5 times from week 1, week should be 6
+      expect(league.week).toBe(6);
+      // phase should match what the calendar says for the current week
+      const expected = orch.calendar.getCurrentEvent(league.season, league.week);
+      expect(league.phase).toBe(expected.phase);
+    }, 30_000);
+  });
+
+  describe('Phase 2: conditional pick resolution', () => {
+    it('resolves conditional picks at season end', () => {
+      const league = createTestLeague(42);
+      const orch = new SeasonOrchestrator(league);
+
+      // Add a conditional pick
+      const team = league.teams[0]!;
+      const condPlayer = league.players.find(p => p.teamId === team.id)!;
+
+      const condPick: DraftPick = {
+        id: draftPickId('cond-pick-test'),
+        originalTeamId: team.id,
+        currentTeamId: team.id,
+        season: league.season + 1,
+        round: 5,
+        pickInRound: null,
+        overall: null,
+        isConditional: true,
+        conditions: [
+          {
+            kind: 'playoff_appearance',
+            teamId: team.id,
+            upgradeTo: 3,
+          },
+        ],
+        resolvedRound: null,
+      };
+      league.draftPicks.push(condPick);
+
+      // Make team a playoff team
+      team.record.wins = 12;
+      team.record.losses = 5;
+
+      // Advance to pro_bowl (week 46) to trigger season end
+      league.week = 46;
+      league.phase = 'pro_bowl';
+      const result = orch.advanceWeek();
+
+      expect(result.conditionalPickResolutions).toBeDefined();
+      const resolutions = result.conditionalPickResolutions!.resolved;
+      const resolved = resolutions.find(r => r.pickId === 'cond-pick-test');
+      expect(resolved).toBeDefined();
+      expect(resolved!.resolvedRound).toBe(3);
+    }, 30_000);
+  });
+
+  describe('Phase 2: determinism', () => {
+    it('same seed produces identical offseason coaching changes', () => {
+      const league1 = (() => {
+        const l = generateLeague(777).league;
+        l.week = 1;
+        l.phase = 'offseason_start';
+        for (let i = 0; i < l.teams.length; i++) {
+          l.teams[i]!.record.wins = i;
+          l.teams[i]!.record.losses = 17 - i;
+        }
+        return l;
+      })();
+
+      const league2 = (() => {
+        const l = generateLeague(777).league;
+        l.week = 1;
+        l.phase = 'offseason_start';
+        for (let i = 0; i < l.teams.length; i++) {
+          l.teams[i]!.record.wins = i;
+          l.teams[i]!.record.losses = 17 - i;
+        }
+        return l;
+      })();
+
+      const orch1 = new SeasonOrchestrator(league1);
+      const orch2 = new SeasonOrchestrator(league2);
+
+      // Advance both to coaching carousel
+      orch1.advanceWeek();
+      orch2.advanceWeek();
+      const res1 = orch1.advanceWeek();
+      const res2 = orch2.advanceWeek();
+
+      expect(res1.coachingChanges?.firings.length).toBe(res2.coachingChanges?.firings.length);
+      expect(res1.coachingChanges?.hirings.length).toBe(res2.coachingChanges?.hirings.length);
+    }, 30_000);
+
+    it('same seed produces identical draft picks', () => {
+      function makeLeague() {
+        const l = generateLeague(888).league;
+        l.week = 1;
+        l.phase = 'offseason_start';
+        for (let i = 0; i < l.teams.length; i++) {
+          l.teams[i]!.record.wins = i;
+          l.teams[i]!.record.losses = 17 - i;
+        }
+        return l;
+      }
+
+      const league1 = makeLeague();
+      const league2 = makeLeague();
+
+      const orch1 = new SeasonOrchestrator(league1);
+      const orch2 = new SeasonOrchestrator(league2);
+
+      // Advance both to draft (week 10)
+      for (let w = 1; w < 10; w++) {
+        orch1.advanceWeek();
+        orch2.advanceWeek();
+      }
+      const draft1 = orch1.advanceWeek();
+      const draft2 = orch2.advanceWeek();
+
+      expect(draft1.draftResults?.selections.length).toBe(draft2.draftResults?.selections.length);
+      if (draft1.draftResults && draft2.draftResults) {
+        for (let i = 0; i < draft1.draftResults.selections.length; i++) {
+          expect(draft1.draftResults.selections[i]!.playerId)
+            .toBe(draft2.draftResults.selections[i]!.playerId);
+          expect(draft1.draftResults.selections[i]!.teamId)
+            .toBe(draft2.draftResults.selections[i]!.teamId);
+        }
+      }
+    }, 120_000);
+  });
+
+  describe('Phase 2: season rollover', () => {
+    it('increments season and resets week after week 46', () => {
+      const league = createTestLeague(42);
+      league.week = 46;
+      league.phase = 'pro_bowl';
+      const initialSeason = league.season;
+
+      const orch = new SeasonOrchestrator(league);
+      orch.advanceWeek();
+
+      expect(league.season).toBe(initialSeason + 1);
+      expect(league.week).toBe(1);
+      expect(league.phase).toBe('offseason_start');
+    }, 30_000);
+  });
+
+  describe('Phase 2: trade deadline enforcement', () => {
+    it('league.phase updates correctly during regular season', () => {
+      const league = createTestLeague(42);
+      const orch = new SeasonOrchestrator(league);
+
+      // Advance several regular season weeks
+      for (let i = 0; i < 5; i++) {
+        orch.advanceWeek();
+      }
+
+      // Phase should still be regular_season
+      expect(['regular_season', 'trade_deadline']).toContain(league.phase);
     });
   });
 });

@@ -275,7 +275,8 @@ describe('TradeEngine', () => {
   });
 
   it('executeTrade blocks illegal trades', () => {
-    const league = makeLeague({ week: 10 });
+    // Calendar week 33 = past the game-week-9 trade deadline
+    const league = makeLeague({ week: 33 });
     const bus = new EventBus<GameEventMap>();
     const rejHandler = vi.fn();
     bus.on('TRADE_REJECTED', rejHandler);

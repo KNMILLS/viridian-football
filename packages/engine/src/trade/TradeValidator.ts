@@ -84,9 +84,19 @@ function checkTradeDeadline(
   league: League,
   violations: string[],
 ): void {
-  const deadlineWeek = league.settings.tradeDeadlineWeek ?? TRADE_DEADLINE_WEEK;
+  const gameWeekDeadline = league.settings.tradeDeadlineWeek ?? TRADE_DEADLINE_WEEK;
+  // Regular season starts at calendar week 24; convert game-week to calendar-week
+  const calendarDeadline = gameWeekDeadline + 23;
+
+  const POSTSEASON_PHASES: ReadonlySet<string> = new Set([
+    'playoffs_wildcard', 'playoffs_divisional',
+    'playoffs_conference', 'super_bowl', 'pro_bowl',
+  ]);
+
   const isRegularSeason = league.phase === 'regular_season';
-  const pastDeadline = isRegularSeason && league.week > deadlineWeek;
+  const pastDeadline =
+    (isRegularSeason && league.week > calendarDeadline) ||
+    POSTSEASON_PHASES.has(league.phase);
 
   if (!pastDeadline) return;
 
@@ -95,7 +105,7 @@ function checkTradeDeadline(
 
   if (hasPlayerOffering || hasPlayerRequesting) {
     violations.push(
-      `Player trades are not allowed after the trade deadline (week ${deadlineWeek})`,
+      `Player trades are not allowed after the trade deadline (week ${gameWeekDeadline})`,
     );
   }
 }

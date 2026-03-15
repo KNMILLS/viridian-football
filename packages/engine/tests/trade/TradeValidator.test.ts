@@ -170,7 +170,8 @@ describe('TradeValidator', () => {
     });
 
     it('blocks player trades after deadline but allows pick swaps', () => {
-      const league = makeLeague({ week: 10, phase: 'regular_season' });
+      // Calendar week 33 = game week 10 (past the game-week-9 deadline)
+      const league = makeLeague({ week: 33, phase: 'regular_season' });
 
       const playerTrade = makeProposal({
         offering: [{ type: 'player', playerId: playerId('p1') }],
@@ -252,8 +253,9 @@ describe('TradeValidator', () => {
     });
 
     it('reports multiple violations simultaneously', () => {
+      // Calendar week 33 = past trade deadline
       const league = makeLeague({
-        week: 10, phase: 'regular_season',
+        week: 33, phase: 'regular_season',
         contracts: [{
           id: contractId('c1'), playerId: playerId('p1'), teamId: teamId('t1'),
           status: 'active', totalValue: 10_000_000, totalGuaranteed: 5_000_000,
