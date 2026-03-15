@@ -79,6 +79,9 @@ export * from './personality/index.js';
 // ── Staff Delegation ───────────────────────────────────────────────
 export * from './delegation/index.js';
 
+// ── Analytics ───────────────────────────────────────────────────────
+export * from './analytics/index.js';
+
 // ── Orchestrator ────────────────────────────────────────────────────
 export { SeasonOrchestrator } from './orchestrator/index.js';
 export type { WeekAdvanceResult, OffseasonResult, OrchestratorConfig } from './orchestrator/index.js';
