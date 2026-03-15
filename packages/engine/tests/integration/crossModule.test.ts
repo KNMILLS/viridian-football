@@ -219,27 +219,7 @@ describe('SeasonOrchestrator', () => {
     });
   });
 
-  describe('delegation', () => {
-    it('delegateDepthChart returns depth chart in auto mode', () => {
-      const league = createTestLeague();
-      const team = league.teams[0]!;
-      team.delegationSettings.depthChart = 'auto';
-      const orch = new SeasonOrchestrator(league);
-      const result = orch.delegateDepthChart(team.id);
-      expect(result.autoApplied).toBe(true);
-      expect(result.decision).toBeDefined();
-    });
-
-    it('delegateDepthChart returns needsUserInput in manual mode', () => {
-      const league = createTestLeague();
-      const team = league.teams[0]!;
-      team.delegationSettings.depthChart = 'manual';
-      const orch = new SeasonOrchestrator(league);
-      const result = orch.delegateDepthChart(team.id);
-      expect(result.needsUserInput).toBe(true);
-      expect(result.staffSuggestion).toBeDefined();
-    });
-
+  describe('delegation (GM-domain only, depth chart is coach-controlled)', () => {
     it('delegateTrainingCampCuts identifies players to cut', () => {
       const league = createTestLeague();
       const team = league.teams[0]!;

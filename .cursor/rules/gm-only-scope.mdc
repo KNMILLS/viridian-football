@@ -1,0 +1,58 @@
+---
+description: Enforces that the user is the GM, not the coach — coaching duties are AI-only
+alwaysApply: true
+---
+
+# GM-Only Scope
+
+The user plays as the General Manager. They do NOT play as the head coach.
+
+## What the GM controls (user-facing)
+
+- **Roster**: 53-man roster, practice squad, injured reserve, waiver claims
+- **Cap management**: contracts, restructures, franchise tags, dead money
+- **Draft**: scouting investment, draft board, pick trades, selections
+- **Trades**: proposing trades, evaluating offers, setting trade block
+- **Free agency**: target lists, contract offers, negotiation strategy
+- **Staff**: hiring/firing head coach, approving coordinator hires
+- **Scouting**: budget allocation, assigning scouts to regions/positions
+- **Analytics**: investing in analytics department level
+- **Facilities**: investing in facilities upgrades
+- **Delegation**: delegating the above GM tasks to front-office staff (manual/review/auto)
+
+## What the coaching staff AI controls (NEVER user-controlled)
+
+- **Depth chart**: coaches rank players at each position based on their evaluation
+- **Formation packages**: OC/DC design formations (11 personnel, 12 personnel, nickel, dime, etc.)
+- **Situational personnel**: 3rd down packages, goal line, 2-minute, prevent defense
+- **Play calling**: OC calls offensive plays, DC calls defensive plays
+- **Game plan**: weekly scheme adjustments based on opponent tendencies
+- **In-game adjustments**: halftime changes, play sequence, audibles
+- **Special teams units**: STC decides kick/punt returners, coverage units
+- **Practice reps**: position coaches allocate practice time
+- **Player usage**: snap counts, rotation, load management
+
+## The GM's only lever over on-field performance
+
+Hire coaches whose philosophy, scheme, and tendencies align with the roster you've built. Fire coaches when results don't meet expectations. The quality of on-field play is a function of talent (GM's job) × coaching (coach AI's job).
+
+## Violations
+
+- Any UI that lets the user manually set the depth chart
+- Any UI that lets the user call plays or set a game plan
+- Any DelegationSettings field for on-field coaching duties
+- Any code path that allows the user to override coaching staff decisions
+
+## Correct patterns
+
+```typescript
+// GM hires a coach — this is their influence on scheme
+gmAction: { kind: 'hire_coach', coachId, role: 'OC' }
+
+// Coach AI sets depth chart — GM can only observe it
+const decisions: CoachDepthChartDecision[] = coaching.generateDepthChart(teamId);
+
+// GM sees the result but cannot change it
+// "Coach Smith has benched [Player A] in favour of [Player B]"
+// The GM can only react by trading/cutting players or firing the coach
+```

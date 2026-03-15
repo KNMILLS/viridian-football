@@ -88,15 +88,49 @@ export interface PuntingRatings {
 }
 
 // ── Personality Traits ──────────────────────────────────────────────
+// Rich enough that every player feels like a distinct individual with
+// their own motivations, relationships, and behaviours.
 
 export interface PersonalityTraits {
-  leadership: number;     // 0-99, influences locker room and mentorship
-  workEthic: number;      // affects progression rate
-  ego: number;            // high ego + underpaid = holdout risk
-  coachability: number;   // affects scheme fit adaptation speed
-  competitiveness: number;
-  composure: number;      // performance under pressure
-  loyalty: number;        // affects willingness to take team-friendly deals
+  // ── Core character ───────────────────────────────────────────────
+  leadership: number;       // 0-99, locker room influence, captaincy material
+  workEthic: number;        // affects progression rate and practice intensity
+  ego: number;              // high ego + underpaid = holdout risk, diva behaviour
+  coachability: number;     // scheme adaptation speed, willingness to accept coaching
+  competitiveness: number;  // drive to win, intensity in close games
+  composure: number;        // performance under pressure, big-game moments
+  loyalty: number;          // willingness to take team-friendly deals, stays vs chases money
+
+  // ── Motivation drivers ───────────────────────────────────────────
+  greed: number;            // 0-99, prioritises money over winning/legacy
+  legacyDrive: number;      // 0-99, motivated by championships, records, HOF
+  fameSeeking: number;      // 0-99, chases media spotlight, endorsements, social media
+  familyOriented: number;   // 0-99, prefers staying near family, may refuse relocation
+
+  // ── Social / locker room ─────────────────────────────────────────
+  teamChemistryEffect: number; // 0-99, how much the player lifts/drags teammates
+  prankster: number;        // 0-99, keeps locker room loose, can annoy serious players
+  loner: number;            // 0-99, prefers keeping to self, unaffected by team drama
+  mentorWillingness: number;// 0-99, likelihood of taking young players under their wing
+  respectForVeterans: number;// 0-99, rookies with low value may clash with vets
+
+  // ── On-field behaviour ───────────────────────────────────────────
+  aggression: number;       // 0-99, physicality, unnecessary roughness penalties
+  discipline: number;       // 0-99, penalty avoidance (false starts, offsides, personal fouls)
+  motorEffort: number;      // 0-99, plays through the whistle, hustle on every rep
+  footballIQ: number;       // 0-99, pre-snap reads, audible recognition, assignment mastery
+  filmStudyDedication: number; // 0-99, affects week-to-week preparation quality
+
+  // ── Off-field / character ────────────────────────────────────────
+  offFieldRisk: number;     // 0-99, higher = more likely off-field incidents/suspensions
+  mediaHandling: 'shy' | 'professional' | 'outspoken' | 'volatile';
+  communityEngagement: number; // 0-99, charity work, fan favourite, WPMOY candidate
+  durabilityMindset: number;// 0-99, willingness to play through pain vs sit out
+
+  // ── Adversity response ───────────────────────────────────────────
+  resilience: number;       // 0-99, bounces back from benching, bad game, trade
+  confidenceVolatility: number; // 0-99, high = streaky (hot/cold), low = steady
+  chipOnShoulder: number;   // 0-99, extra motivation when disrespected (draft slide, cut, benched)
 }
 
 // ── Hidden Attributes (revealed through scouting) ───────────────────
@@ -107,6 +141,8 @@ export interface HiddenAttributes {
   clutchFactor: number;          // playoff/big game modifier
   consistencyVariance: number;   // game-to-game performance variability
   ceilingFloor: [number, number]; // [floor, ceiling] of progression
+  footballCharacter: number;     // 0-99, "does he love football?" — impacts long-term motivation
+  schemeVersatility: number;     // 0-99, how many schemes he can thrive in (not just current one)
 }
 
 // ── Player Contract Reference ───────────────────────────────────────
@@ -193,14 +229,72 @@ export interface DraftProspect {
   combineResults?: CombineResults;
 }
 
+// ── NFL-Style Scouting Report ───────────────────────────────────────
+// Modelled after real NFL front-office evaluation sheets.
+// Scouts never see a "78 overall"; they produce written assessments
+// with grade ranges that narrow as more time is invested.
+
+export type ScoutGrade =
+  | 9.0  // generational / perennial All-Pro
+  | 8.0  // Pro Bowl talent
+  | 7.0  // solid starter
+  | 6.5  // low-end starter / high backup
+  | 6.0  // quality backup / core special teamer
+  | 5.5  // developmental / camp body
+  | 5.0  // priority free agent
+  | 4.0; // not draftable
+
 export interface ScoutingReport {
-  overallRange: [number, number]; // [low, high] confidence interval
-  strengthNotes: string[];
-  weaknessNotes: string[];
-  comparisonPlayer: string | null;
-  grade: 'A' | 'B' | 'C' | 'D' | 'F' | null;
-  scoutingInvestment: number;     // 0-100, how much you've invested in scouting this player
-  confidenceLevel: number;        // 0-100, how narrow the range is
+  /** Grade range narrows with more scouting investment */
+  gradeRange: [number, number];   // e.g. [5.5, 7.0] before narrowing to [6.3, 6.7]
+  overallGrade: ScoutGrade | null; // null until enough investment reveals a grade
+  scoutingInvestment: number;     // 0-100, hours/resources invested
+  confidenceLevel: number;        // 0-100, derived from investment + combine + interviews
+
+  // ── Written evaluation (generated from attributes + investment) ──
+  summary: string | null;         // 1-2 sentence executive summary
+  strengths: ScoutingNote[];
+  weaknesses: ScoutingNote[];
+  rawAbilityNotes: string | null; // physical tools assessment
+  productionNotes: string | null; // college production context
+
+  // ── Scheme fit assessment ────────────────────────────────────────
+  schemeFitGrades: SchemeFitGrade[];
+
+  // ── Character / intangibles ──────────────────────────────────────
+  characterGrade: 'green' | 'yellow' | 'red' | null; // team's character assessment
+  characterNotes: string | null;
+  leadershipProjection: string | null;
+
+  // ── Comparison / projection ──────────────────────────────────────
+  comparisonPlayer: string | null;     // "Plays like a young [X]"
+  comparisonConfidence: number;        // 0-100, how confident in the comp
+  ceilingProjection: string | null;    // best-case outcome description
+  floorProjection: string | null;      // worst-case outcome description
+  readyToContribute: 'day_one' | 'year_two' | 'developmental' | 'project' | null;
+
+  // ── Critical factors ─────────────────────────────────────────────
+  criticalFactors: CriticalFactor[];   // make-or-break traits
+  medicalFlag: 'clear' | 'minor_concern' | 'major_concern' | null;
+  medicalNotes: string | null;
+}
+
+export interface ScoutingNote {
+  category: 'physical' | 'technical' | 'mental' | 'production' | 'intangible';
+  text: string;
+  confidence: number; // 0-100, how sure the scout is about this observation
+}
+
+export interface SchemeFitGrade {
+  scheme: string;
+  fitGrade: number;     // 1.0-9.0 scale, same as scouting grade
+  notes: string | null;
+}
+
+export interface CriticalFactor {
+  trait: string;         // e.g. "arm strength", "lateral agility", "character concerns"
+  assessment: 'plus' | 'neutral' | 'minus';
+  note: string;
 }
 
 export interface CombineResults {

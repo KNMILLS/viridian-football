@@ -239,6 +239,8 @@ export class CoachingEngine implements ICoachingEngine {
       schemeDesign: randomInt(this.rng, 40, 95),
       recruiting: randomInt(this.rng, 40, 95),
       adaptability: randomInt(this.rng, 40, 95),
+      talentEvaluation: randomInt(this.rng, 40, 95),
+      situationalAwareness: randomInt(this.rng, 40, 95),
     };
 
     const personality: CoachPersonality = {
@@ -247,15 +249,20 @@ export class CoachingEngine implements ICoachingEngine {
       motivation: randomInt(this.rng, 40, 95),
       innovation: randomInt(this.rng, 20, 90),
       ego: randomInt(this.rng, 10, 80),
+      stubbornness: randomInt(this.rng, 15, 85),
+      trustInYouth: randomInt(this.rng, 20, 80),
       mediaPresence: weightedChoice(this.rng, [
-        { item: 'quiet' as const, weight: 30 },
-        { item: 'moderate' as const, weight: 50 },
-        { item: 'fiery' as const, weight: 20 },
+        { item: 'quiet' as const, weight: 25 },
+        { item: 'professional' as const, weight: 40 },
+        { item: 'fiery' as const, weight: 25 },
+        { item: 'eccentric' as const, weight: 10 },
       ]),
     };
 
     const wins = randomInt(this.rng, 0, yearsExp * 10);
     const losses = randomInt(this.rng, 0, yearsExp * 10);
+
+    const tendencies = this.generateDefaultTendencies(personality, offScheme, defScheme);
 
     return {
       id: coachId(`candidate-${Date.now()}-${randomInt(this.rng, 1000, 9999)}`),
@@ -268,6 +275,7 @@ export class CoachingEngine implements ICoachingEngine {
       defensiveScheme: defScheme,
       attributes: attrs,
       personality,
+      tendencies,
       coachingTreeOrigin: (origin === 'tree' && mentor) ? mentor.id : null,
       yearsExperience: yearsExp,
       record: { wins, losses, ties: 0 },
@@ -275,6 +283,72 @@ export class CoachingEngine implements ICoachingEngine {
       championships: chance(this.rng, origin === 'comeback' ? 0.2 : 0.05) ? randomInt(this.rng, 1, 2) : 0,
       salary: 0,
       contractYearsRemaining: 0,
+    };
+  }
+
+  // ── Coach-controlled systems (depth chart, game plan) ──────────
+
+  generateDepthChart(_teamId: import('../types/ids.js').TeamId): import('../types/coach.js').CoachDepthChartDecision[] {
+    // Full implementation in Phase 2+; this is the interface contract
+    return [];
+  }
+
+  generateGamePlan(_teamId: import('../types/ids.js').TeamId, _opponentId: import('../types/ids.js').TeamId): import('../types/coach.js').GamePlan {
+    // Full implementation in Phase 2+; this is the interface contract
+    const coach = [...this.coachMap.values()].find(c => c.teamId === _teamId && c.role === 'HC');
+    return {
+      coachId: coach?.id ?? coachId('unknown'),
+      opponent: _opponentId,
+      offensiveEmphasis: [],
+      defensiveEmphasis: [],
+      keyMatchups: [],
+      tempoAdjustment: 'normal',
+      riskLevel: 'balanced',
+    };
+  }
+
+  // ── Private helpers ────────────────────────────────────────────
+
+  private generateDefaultTendencies(
+    personality: CoachPersonality,
+    offScheme: import('../types/coach.js').OffensiveScheme | null,
+    defScheme: import('../types/coach.js').DefensiveScheme | null,
+  ): import('../types/coach.js').CoachTendencies {
+    let baseRunPass = 50;
+    if (offScheme === 'power_run' || offScheme === 'zone_run') baseRunPass = 35;
+    else if (offScheme === 'air_raid' || offScheme === 'spread') baseRunPass = 70;
+
+    return {
+      runPassRatio: clamp(baseRunPass + randomInt(this.rng, -10, 10), 15, 85),
+      earlyDownRunRate: randomInt(this.rng, 30, 65),
+      playActionFrequency: offScheme === 'play_action_heavy' ? randomInt(this.rng, 30, 50) : randomInt(this.rng, 10, 30),
+      fourthDownAggressiveness: clamp(personality.aggressiveness + randomInt(this.rng, -15, 15), 10, 95),
+      redZoneAggression: randomInt(this.rng, 30, 80),
+      twoMinuteDrillEfficiency: randomInt(this.rng, 30, 90),
+      blitzRate: defScheme === 'aggressive_blitz' ? randomInt(this.rng, 50, 80) : randomInt(this.rng, 15, 50),
+      coverageDisguise: defScheme === 'multiple' ? randomInt(this.rng, 60, 90) : randomInt(this.rng, 20, 60),
+      rotationPhilosophy: weightedChoice(this.rng, [
+        { item: 'bell_cow' as const, weight: 25 },
+        { item: 'committee' as const, weight: 45 },
+        { item: 'matchup_based' as const, weight: 30 },
+      ]),
+      rookieLeash: clamp(personality.trustInYouth + randomInt(this.rng, -10, 10), 10, 90),
+      veteranLoyalty: clamp(100 - personality.trustInYouth + randomInt(this.rng, -10, 10), 10, 90),
+      starterReps: randomInt(this.rng, 60, 90),
+      tempoPreference: weightedChoice(this.rng, [
+        { item: 'slow' as const, weight: 15 },
+        { item: 'balanced' as const, weight: 40 },
+        { item: 'uptempo' as const, weight: 30 },
+        { item: 'no_huddle' as const, weight: 15 },
+      ]),
+      formationVariety: clamp(personality.innovation + randomInt(this.rng, -15, 15), 15, 95),
+      motionFrequency: randomInt(this.rng, 15, 80),
+      preferredPersonnelGroupings: [
+        { label: '11', usagePercentage: 40 },
+        { label: '12', usagePercentage: 30 },
+        { label: '21', usagePercentage: 20 },
+        { label: '22', usagePercentage: 10 },
+      ],
     };
   }
 }

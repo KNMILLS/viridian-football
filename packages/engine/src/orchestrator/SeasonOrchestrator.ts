@@ -36,7 +36,7 @@ import {
 } from '../personality/PersonalityEngine.js';
 import { processOffseasonProgression, type ProgressionContext, type ProgressionResult } from '../progression/ProgressionEngine.js';
 import { delegateToStaff, type DelegationResult } from '../delegation/DelegationEngine.js';
-import { autoDepthChart, autoTrainingCampCuts } from '../delegation/autoDecisions.js';
+import { autoTrainingCampCuts } from '../delegation/autoDecisions.js';
 
 // ── Types ──────────────────────────────────────────────────────────
 
@@ -381,18 +381,7 @@ export class SeasonOrchestrator {
     }
   }
 
-  // ── Delegation Helpers ──────────────────────────────────────────
-
-  delegateDepthChart(teamId: TeamId): DelegationResult<Record<string, PlayerId[]>> {
-    const team = this.league.teams.find(t => t.id === teamId);
-    if (!team) throw new Error(`Team ${teamId} not found`);
-
-    const players = this.getTeamPlayers(teamId);
-    return delegateToStaff(
-      team.delegationSettings.depthChart,
-      () => autoDepthChart(players) as unknown as Record<string, PlayerId[]>,
-    );
-  }
+  // ── GM Delegation Helpers (roster management only) ──────────────
 
   delegateTrainingCampCuts(teamId: TeamId, rosterLimit = 53): DelegationResult<PlayerId[]> {
     const team = this.league.teams.find(t => t.id === teamId);

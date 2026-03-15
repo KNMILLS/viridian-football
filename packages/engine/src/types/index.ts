@@ -17,6 +17,7 @@ export type {
   BlockingRatings, DefenseRatings, KickingRatings, PuntingRatings,
   PersonalityTraits, HiddenAttributes, InjuryStatus,
   PlayerContractRef, ProgressionCurve,
+  ScoutGrade, ScoutingNote, SchemeFitGrade, CriticalFactor,
 } from './player.js';
 
 // ── Contract / Cap ──────────────────────────────────────────────────
@@ -31,12 +32,15 @@ export type {
 export type {
   Team, OwnerProfile, DepthChart, TeamRecord,
   DelegationSettings, DelegationMode,
+  CoachControlledSystems,
   Conference, Division,
 } from './team.js';
 
 // ── Coach ───────────────────────────────────────────────────────────
 export type {
   Coach, CoachRole, CoachAttributes, CoachPersonality,
+  CoachTendencies, PersonnelGrouping,
+  CoachDepthChartDecision, GamePlan,
   OffensiveScheme, DefensiveScheme,
   SchemeFitResult, CoachingTreeNode, ICoachingEngine,
 } from './coach.js';

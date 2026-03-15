@@ -8,7 +8,7 @@ import { createLCG, randomInt, normalRandom, clamp, shuffle, chance, weightedCho
 import type { RNG } from '../sim/RNG.js';
 import type { Player, PhysicalRatings, PersonalityTraits, HiddenAttributes, Position } from '../types/player.js';
 import type { Team, OwnerProfile, DelegationSettings, TeamRecord } from '../types/team.js';
-import type { Coach, CoachAttributes, CoachPersonality, CoachRole } from '../types/coach.js';
+import type { Coach, CoachAttributes, CoachPersonality, CoachRole, CoachTendencies, OffensiveScheme, DefensiveScheme, PersonnelGrouping } from '../types/coach.js';
 import type { Contract, ContractYear } from '../types/contract.js';
 import type { DraftPick } from '../types/draft.js';
 import type { League, LeagueSettings } from '../types/league.js';
@@ -66,15 +66,15 @@ function generateTeams(rng: RNG, lid: string): Team[] {
     const tid = teamId(`team-${i + 1}`);
     const owner = generateOwnerProfile(rng, seed.ownerName);
     const defaultDelegation: DelegationSettings = {
-      depthChart: 'auto',
       practiceSquad: 'auto',
       waiverClaims: 'review',
       trainingCampCuts: 'review',
+      injuredReserve: 'review',
       contractNegotiations: 'manual',
       scoutingAssignments: 'review',
       tradeEvaluation: 'manual',
       draftBoard: 'manual',
-      gameplanAdjustments: 'auto',
+      freeAgencyTargets: 'review',
     };
 
     const emptyRecord: TeamRecord = {
@@ -152,6 +152,8 @@ function generateCoaches(rng: RNG, lid: string, teams: Team[]): Coach[] {
         schemeDesign: randomInt(rng, 40, 95),
         recruiting: randomInt(rng, 40, 95),
         adaptability: randomInt(rng, 40, 95),
+        talentEvaluation: randomInt(rng, 40, 95),
+        situationalAwareness: randomInt(rng, 40, 95),
       };
 
       const personality: CoachPersonality = {
@@ -160,10 +162,13 @@ function generateCoaches(rng: RNG, lid: string, teams: Team[]): Coach[] {
         motivation: randomInt(rng, 40, 95),
         innovation: randomInt(rng, 20, 90),
         ego: randomInt(rng, 10, 80),
+        stubbornness: randomInt(rng, 15, 85),
+        trustInYouth: randomInt(rng, 20, 80),
         mediaPresence: weightedChoice(rng, [
-          { item: 'quiet' as const, weight: 30 },
-          { item: 'moderate' as const, weight: 50 },
-          { item: 'fiery' as const, weight: 20 },
+          { item: 'quiet' as const, weight: 25 },
+          { item: 'professional' as const, weight: 40 },
+          { item: 'fiery' as const, weight: 25 },
+          { item: 'eccentric' as const, weight: 10 },
         ]),
       };
 
@@ -171,6 +176,8 @@ function generateCoaches(rng: RNG, lid: string, teams: Team[]): Coach[] {
       const salary = role === 'HC' ? randomInt(rng, 5_000_000, 15_000_000) :
                      role === 'OC' || role === 'DC' ? randomInt(rng, 2_000_000, 6_000_000) :
                      randomInt(rng, 500_000, 2_000_000);
+
+      const tendencies = generateCoachTendencies(rng, personality, offScheme, defScheme);
 
       const coach: Coach = {
         id: cid,
@@ -183,6 +190,7 @@ function generateCoaches(rng: RNG, lid: string, teams: Team[]): Coach[] {
         defensiveScheme: defScheme,
         attributes: attrs,
         personality,
+        tendencies,
         coachingTreeOrigin: null,
         yearsExperience: yearsExp,
         record: { wins: randomInt(rng, 0, yearsExp * 10), losses: randomInt(rng, 0, yearsExp * 10), ties: 0 },
@@ -305,14 +313,47 @@ function generatePhysicalRatings(rng: RNG, position: Position, tier: string): Ph
 }
 
 function generatePersonality(rng: RNG): PersonalityTraits {
+  const ego = randomInt(rng, 10, 90);
+  const leadership = randomInt(rng, 20, 95);
   return {
-    leadership: randomInt(rng, 20, 95),
+    leadership,
     workEthic: randomInt(rng, 25, 99),
-    ego: randomInt(rng, 10, 90),
+    ego,
     coachability: randomInt(rng, 30, 95),
     competitiveness: randomInt(rng, 40, 99),
     composure: randomInt(rng, 30, 95),
     loyalty: randomInt(rng, 20, 90),
+
+    greed: randomInt(rng, 10, 85),
+    legacyDrive: randomInt(rng, 15, 90),
+    fameSeeking: randomInt(rng, 5, 80),
+    familyOriented: randomInt(rng, 20, 90),
+
+    teamChemistryEffect: randomInt(rng, 30, 95),
+    prankster: randomInt(rng, 5, 70),
+    loner: randomInt(rng, 5, 60),
+    mentorWillingness: clamp(leadership - randomInt(rng, 0, 20), 10, 99),
+    respectForVeterans: randomInt(rng, 30, 95),
+
+    aggression: randomInt(rng, 15, 85),
+    discipline: randomInt(rng, 25, 95),
+    motorEffort: randomInt(rng, 40, 99),
+    footballIQ: randomInt(rng, 30, 99),
+    filmStudyDedication: randomInt(rng, 20, 95),
+
+    offFieldRisk: randomInt(rng, 0, 50),
+    mediaHandling: weightedChoice(rng, [
+      { item: 'shy' as const, weight: 20 },
+      { item: 'professional' as const, weight: 45 },
+      { item: 'outspoken' as const, weight: 25 },
+      { item: 'volatile' as const, weight: 10 },
+    ]),
+    communityEngagement: randomInt(rng, 10, 95),
+    durabilityMindset: randomInt(rng, 30, 95),
+
+    resilience: randomInt(rng, 30, 95),
+    confidenceVolatility: randomInt(rng, 10, 80),
+    chipOnShoulder: randomInt(rng, 10, 85),
   };
 }
 
@@ -329,6 +370,63 @@ function generateHiddenAttributes(rng: RNG, tier: string): HiddenAttributes {
       clamp(trueOverall - randomInt(rng, 5, 15), 25, 99),
       clamp(trueOverall + randomInt(rng, 3, 20), 25, 99),
     ],
+    footballCharacter: randomInt(rng, 30, 99),
+    schemeVersatility: randomInt(rng, 20, 90),
+  };
+}
+
+function generateCoachTendencies(
+  rng: RNG,
+  personality: CoachPersonality,
+  offScheme: OffensiveScheme | null,
+  defScheme: DefensiveScheme | null,
+): CoachTendencies {
+  // Run-pass ratio influenced by scheme
+  let baseRunPass = 50;
+  if (offScheme === 'power_run' || offScheme === 'zone_run') baseRunPass = 35;
+  else if (offScheme === 'air_raid' || offScheme === 'spread') baseRunPass = 70;
+  else if (offScheme === 'rpo_heavy') baseRunPass = 50;
+  else if (offScheme === 'play_action_heavy') baseRunPass = 45;
+  else if (offScheme === 'west_coast') baseRunPass = 55;
+
+  const groupings: PersonnelGrouping[] = [];
+  if (offScheme === 'spread' || offScheme === 'air_raid') {
+    groupings.push({ label: '11', usagePercentage: 55 }, { label: '10', usagePercentage: 20 }, { label: '12', usagePercentage: 15 }, { label: '21', usagePercentage: 10 });
+  } else if (offScheme === 'power_run' || offScheme === 'zone_run') {
+    groupings.push({ label: '12', usagePercentage: 35 }, { label: '21', usagePercentage: 30 }, { label: '22', usagePercentage: 15 }, { label: '11', usagePercentage: 20 });
+  } else {
+    groupings.push({ label: '11', usagePercentage: 40 }, { label: '12', usagePercentage: 30 }, { label: '21', usagePercentage: 15 }, { label: '22', usagePercentage: 10 }, { label: '10', usagePercentage: 5 });
+  }
+
+  return {
+    runPassRatio: clamp(baseRunPass + randomInt(rng, -10, 10), 15, 85),
+    earlyDownRunRate: clamp(50 - (baseRunPass - 50) + randomInt(rng, -8, 8), 20, 75),
+    playActionFrequency: offScheme === 'play_action_heavy' ? randomInt(rng, 30, 50) : randomInt(rng, 10, 30),
+
+    fourthDownAggressiveness: clamp(personality.aggressiveness + randomInt(rng, -15, 15), 10, 95),
+    redZoneAggression: randomInt(rng, 30, 80),
+    twoMinuteDrillEfficiency: randomInt(rng, 30, 90),
+    blitzRate: defScheme === 'aggressive_blitz' ? randomInt(rng, 50, 80) : randomInt(rng, 15, 50),
+    coverageDisguise: defScheme === 'multiple' ? randomInt(rng, 60, 90) : randomInt(rng, 20, 60),
+
+    rotationPhilosophy: weightedChoice(rng, [
+      { item: 'bell_cow' as const, weight: 25 },
+      { item: 'committee' as const, weight: 45 },
+      { item: 'matchup_based' as const, weight: 30 },
+    ]),
+    rookieLeash: clamp(personality.trustInYouth + randomInt(rng, -10, 10), 10, 90),
+    veteranLoyalty: clamp(100 - personality.trustInYouth + randomInt(rng, -10, 10), 10, 90),
+    starterReps: randomInt(rng, 60, 90),
+
+    tempoPreference: weightedChoice(rng, [
+      { item: 'slow' as const, weight: 15 },
+      { item: 'balanced' as const, weight: 40 },
+      { item: 'uptempo' as const, weight: 30 },
+      { item: 'no_huddle' as const, weight: 15 },
+    ]),
+    formationVariety: clamp(personality.innovation + randomInt(rng, -15, 15), 15, 95),
+    motionFrequency: randomInt(rng, 15, 80),
+    preferredPersonnelGroupings: groupings,
   };
 }
 

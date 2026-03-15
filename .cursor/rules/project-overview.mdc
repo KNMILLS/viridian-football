@@ -20,6 +20,16 @@ Online web-based pro football GM simulation game.
 - `@viridian/engine` — Deterministic simulation engine, shared between server and client
 - `apps/web` — Next.js frontend, GM dashboard
 
-## Core Principle: Emergent Systems
+## Core Principles
 
+### Emergent Systems
 Everything interesting in the game is produced by independent systems reacting to events on the event bus. Nothing is hardcoded or scripted.
+
+### GM-Only Scope
+The user plays as the General Manager. They NEVER control on-field coaching duties. The GM's domain is: hiring/firing coaches, roster construction, cap management, trades, draft strategy, and scouting investment. Everything on the field — depth chart, formations, play calling, game plans, in-game adjustments — is controlled by the coaching staff AI. The GM's only lever over on-field performance is hiring the right coaches.
+
+### Unique Players
+Every player must feel like a distinct individual. PersonalityTraits covers 30+ attributes across core character, motivation, social dynamics, on-field behaviour, off-field risk, and adversity response. Players are not just stat lines — they have motivations, relationships, and agency.
+
+### NFL-Style Scouting
+Player evaluation mirrors real NFL scouting reports: grade ranges (1.0-9.0 scale), written assessments, scheme fit grades, comparison players, critical factors, and character flags. The user never sees a raw "78 overall" — they see scouting reports whose accuracy depends on investment.
