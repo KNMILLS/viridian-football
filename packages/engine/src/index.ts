@@ -33,3 +33,6 @@ export {
   userId,
   contractId,
 } from './types/index.js';
+
+// ── Cap Engine ──────────────────────────────────────────────────────
+export { CapEngine } from './cap/index.js';
