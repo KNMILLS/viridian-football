@@ -79,6 +79,27 @@ export * from './personality/index.js';
 // ── Staff Delegation ───────────────────────────────────────────────
 export * from './delegation/index.js';
 
+// ── Trade System ───────────────────────────────────────────────────
+export {
+  TradeEngine,
+  getPlayerTradeValue, getPickTradeValue, getSurplusValue,
+  getContenderPremium, getDeadlinePressure, computeFairnessScore,
+  validateTradeLegality, calculateCapImpact,
+  generateCounterOffer, evaluateFromTeamPerspective,
+  getTradeRequestLikelihood, getTradeReaction, getTeammateReaction, getNoTradeClauseVetoLikelihood,
+  ConditionalPickTracker,
+  ViridianTradeValueChart, getDiscountedPickValue, getRawPickValue, computeAgingDiscount,
+  TRADE_DEADLINE_WEEK, MAX_ASSETS_PER_SIDE, FUTURE_PICK_DISCOUNT,
+  CONTENDER_PREMIUM_MAX, DEADLINE_PRESSURE_MAX,
+  FAIRNESS_THRESHOLD_CLOSE, FAIRNESS_THRESHOLD_UNFAIR,
+  POSITION_SCARCITY,
+} from './trade/index.js';
+export type {
+  ValuationTeamContext, TradeRequestContext, TradeReactionContext,
+  TradeReactionResult, TeammateReactionContext, TeammateReactionResult,
+  SeasonConditionData, ConditionStatus, TradeValueChartDeps,
+} from './trade/index.js';
+
 // ── Orchestrator ────────────────────────────────────────────────────
 export { SeasonOrchestrator } from './orchestrator/index.js';
 export type { WeekAdvanceResult, OffseasonResult, OrchestratorConfig } from './orchestrator/index.js';
