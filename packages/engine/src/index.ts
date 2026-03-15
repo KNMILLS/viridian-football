@@ -33,3 +33,12 @@ export {
   userId,
   contractId,
 } from './types/index.js';
+
+// ── Coaching ────────────────────────────────────────────────────────
+export { CoachingEngine } from './coaching/index.js';
+export { offensiveSchemeMappings, defensiveSchemeMappings } from './coaching/index.js';
+export type { AttributeWeight, PositionWeightMap } from './coaching/index.js';
+
+// ── Progression ─────────────────────────────────────────────────────
+export { processOffseasonProgression, defaultCurves } from './progression/index.js';
+export type { ProgressionContext, ProgressionResult, RatingChange } from './progression/index.js';
