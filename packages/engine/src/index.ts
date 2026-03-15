@@ -110,6 +110,9 @@ export type {
   SeasonConditionData, ConditionStatus, TradeValueChartDeps,
 } from './trade/index.js';
 
+// ── Roster Management ───────────────────────────────────────────────
+export * from './roster/index.js';
+
 // ── Orchestrator ────────────────────────────────────────────────────
 export { SeasonOrchestrator } from './orchestrator/index.js';
 export type { WeekAdvanceResult, OffseasonResult, OrchestratorConfig } from './orchestrator/index.js';
