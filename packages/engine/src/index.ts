@@ -79,6 +79,7 @@ export * from './personality/index.js';
 // ── Staff Delegation ───────────────────────────────────────────────
 export * from './delegation/index.js';
 
+<<<<<<< HEAD
 // ── Draft ───────────────────────────────────────────────────────────
 export { DraftEngine } from './draft/index.js';
 export { generateDraftClass } from './draft/index.js';
@@ -112,6 +113,9 @@ export type {
 
 // ── Roster Management ───────────────────────────────────────────────
 export * from './roster/index.js';
+
+// ── Analytics ───────────────────────────────────────────────────────
+export * from './analytics/index.js';
 
 // ── Orchestrator ────────────────────────────────────────────────────
 export { SeasonOrchestrator } from './orchestrator/index.js';
