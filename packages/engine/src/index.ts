@@ -69,3 +69,12 @@ export type { AttributeWeight, PositionWeightMap } from './coaching/index.js';
 // ── Progression ─────────────────────────────────────────────────────
 export { processOffseasonProgression, defaultCurves } from './progression/index.js';
 export type { ProgressionContext, ProgressionResult, RatingChange } from './progression/index.js';
+
+// ── Injury System ──────────────────────────────────────────────────
+export * from './injury/index.js';
+
+// ── Personality / Morale ───────────────────────────────────────────
+export * from './personality/index.js';
+
+// ── Staff Delegation ───────────────────────────────────────────────
+export * from './delegation/index.js';
