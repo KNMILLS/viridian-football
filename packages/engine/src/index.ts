@@ -79,6 +79,37 @@ export * from './personality/index.js';
 // ── Staff Delegation ───────────────────────────────────────────────
 export * from './delegation/index.js';
 
+// ── Draft ───────────────────────────────────────────────────────────
+export { DraftEngine } from './draft/index.js';
+export { generateDraftClass } from './draft/index.js';
+export { generateInitialReport, conductScoutingVisit } from './draft/index.js';
+export { runCombine, runProDay } from './draft/index.js';
+export { generateTeamBoard } from './draft/index.js';
+export { resolveConditions } from './draft/index.js';
+export { getPickValue, getPickValueByOverall, getQBPremium, getFuturePickDiscount, getPickValueWithContext } from './draft/index.js';
+export type { VisitType, BoardWeights, SeasonData, TalentTier, CombineRange } from './draft/index.js';
+
+// ── Trade System ───────────────────────────────────────────────────
+export {
+  TradeEngine,
+  getPlayerTradeValue, getPickTradeValue, getSurplusValue,
+  getContenderPremium, getDeadlinePressure, computeFairnessScore,
+  validateTradeLegality, calculateCapImpact,
+  generateCounterOffer, evaluateFromTeamPerspective,
+  getTradeRequestLikelihood, getTradeReaction, getTeammateReaction, getNoTradeClauseVetoLikelihood,
+  ConditionalPickTracker,
+  ViridianTradeValueChart, getDiscountedPickValue, getRawPickValue, computeAgingDiscount,
+  TRADE_DEADLINE_WEEK, MAX_ASSETS_PER_SIDE, FUTURE_PICK_DISCOUNT,
+  CONTENDER_PREMIUM_MAX, DEADLINE_PRESSURE_MAX,
+  FAIRNESS_THRESHOLD_CLOSE, FAIRNESS_THRESHOLD_UNFAIR,
+  POSITION_SCARCITY,
+} from './trade/index.js';
+export type {
+  ValuationTeamContext, TradeRequestContext, TradeReactionContext,
+  TradeReactionResult, TeammateReactionContext, TeammateReactionResult,
+  SeasonConditionData, ConditionStatus, TradeValueChartDeps,
+} from './trade/index.js';
+
 // ── Orchestrator ────────────────────────────────────────────────────
 export { SeasonOrchestrator } from './orchestrator/index.js';
 export type { WeekAdvanceResult, OffseasonResult, OrchestratorConfig } from './orchestrator/index.js';
