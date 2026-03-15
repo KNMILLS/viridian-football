@@ -1,0 +1,47 @@
+---
+description: Engine module development patterns and conventions
+globs: packages/engine/**/*.ts
+alwaysApply: false
+---
+
+# Engine Module Patterns
+
+## Deterministic RNG
+
+Never use `Math.random()`. All randomness must flow through seeded `RNG` instances from `src/sim/RNG.ts`. This ensures reproducibility and testability.
+
+```typescript
+import { createLCG, randomInt, chance } from '../sim/RNG.js';
+const rng = createLCG(seed);
+const roll = randomInt(rng, 1, 100);
+```
+
+## Event Bus Communication
+
+Modules communicate only through the typed event bus. Never import and call another module's internal functions directly.
+
+```typescript
+import { EventBus } from '../events/EventBus.js';
+import type { GameEventMap } from '../events/GameEvents.js';
+
+// Subscribe to events from other modules
+bus.on('INJURY_OCCURRED', (payload) => { /* react */ });
+
+// Publish events for other modules to consume
+bus.emit('HOLDOUT_INITIATED', { playerId, teamId, ... });
+```
+
+## Pure Functions
+
+Engine logic should be pure functions where possible. Given the same inputs and RNG seed, produce the same outputs. Side effects (DB writes, UI updates) happen outside the engine.
+
+## Types First
+
+Import all entity types from `src/types/`. Never define ad-hoc player/team/contract shapes inline.
+
+## Testing Requirements
+
+- Every module must have tests
+- Use deterministic seeds in tests for reproducibility
+- Test edge cases: empty rosters, max cap, zero-experience players
+- Golden tests: verify specific seeds produce expected outputs

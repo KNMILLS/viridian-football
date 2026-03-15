@@ -1,0 +1,35 @@
+---
+description: Enforces the zero hardcoded events rule for emergent gameplay
+alwaysApply: true
+---
+
+# Zero Hardcoded Events Rule
+
+This is the single most important architectural rule in Viridian Football.
+
+## The Rule
+
+Every interesting thing that happens must be the result of dynamic systems interacting through the event bus. Never hardcode events, storylines, or player-specific behaviors.
+
+## Violations
+
+- Checking a specific player name, team name, or season number to trigger behavior
+- Writing `if (player.position === 'QB')` to trigger a narrative event
+- Creating "story templates" that assume a specific context
+- Hard-coding personality events for specific scenarios
+
+## Correct Approach
+
+All events fire based on **conditions**: thresholds, probabilities, and trait combinations.
+
+```typescript
+// BAD — checks identity
+if (player.name === 'Star WR') triggerHoldout();
+
+// GOOD — checks conditions that any player could meet
+if (player.personality.ego > 80 && contract.isUnderpaid && stats.breakoutSeason) {
+  bus.emit('HOLDOUT_INITIATED', { playerId: player.id, ... });
+}
+```
+
+Every behavior must be reproducible by a different player/team under the same conditions.

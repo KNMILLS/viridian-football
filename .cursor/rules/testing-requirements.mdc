@@ -1,0 +1,40 @@
+---
+description: Testing standards for the project
+globs: "**/*.test.ts"
+alwaysApply: false
+---
+
+# Testing Requirements
+
+## Engine Tests (Vitest)
+
+- Every engine module must have corresponding tests
+- Use deterministic seeds: `createLCG(42)` for reproducible tests
+- Coverage thresholds: 80% lines, 80% functions, 70% branches
+- Golden tests: specific seed → specific expected output
+
+```typescript
+import { describe, it, expect } from 'vitest';
+import { createLCG } from '../../src/sim/RNG.js';
+
+describe('moduleName', () => {
+  it('produces deterministic output', () => {
+    const rng = createLCG(42);
+    const result = myFunction(rng, input);
+    expect(result).toEqual(expectedOutput);
+  });
+});
+```
+
+## What to Test
+
+- Core logic correctness (cap calculations, progression curves, trade values)
+- Event bus integration (module A emits → module B reacts correctly)
+- Edge cases (empty roster, max cap, rookie with 0 experience)
+- Invariants (cap never negative, roster never > 53, all IDs unique)
+
+## What NOT to Test
+
+- UI rendering (save for Playwright E2E)
+- Third-party library internals
+- Simple type re-exports

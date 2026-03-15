@@ -1,0 +1,40 @@
+---
+description: Next.js frontend patterns and conventions
+globs: apps/web/**/*.{ts,tsx}
+alwaysApply: false
+---
+
+# Web App Patterns
+
+## Component Structure
+
+- Use shadcn/ui components from `@/components/ui/`
+- Custom components in `@/components/`
+- Utility function: `cn()` from `@/lib/utils`
+- Use Server Components by default; add `'use client'` only when needed
+
+## State Management
+
+- Zustand stores in `@/stores/`
+- Engine types imported from `@viridian/engine/types`
+
+```typescript
+import { create } from 'zustand';
+import type { Team, Player } from '@viridian/engine/types';
+```
+
+## Styling
+
+- Tailwind CSS 4 utility classes
+- Dark mode support (use `dark:` variant)
+- Responsive: mobile-first with `sm:`, `md:`, `lg:` breakpoints
+
+## Progressive Disclosure
+
+- Summary first, drill-down on demand
+- Contextual help tooltips on every complex concept
+- Every major system reachable in 1 click from dashboard
+
+## Delegation UI
+
+Every management subsystem must offer manual / review / auto modes. Show delegation controls prominently so players can choose their engagement level.

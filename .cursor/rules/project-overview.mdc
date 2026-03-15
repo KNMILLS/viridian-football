@@ -1,0 +1,25 @@
+---
+description: Viridian Football project overview and architecture context
+alwaysApply: true
+---
+
+# Viridian Football
+
+Online web-based pro football GM simulation game.
+
+## Architecture
+
+- **Monorepo**: Turborepo with `apps/web` (Next.js 16) and `packages/engine` (TypeScript)
+- **Database**: Supabase (PostgreSQL + Auth + Realtime + Edge Functions)
+- **State**: Zustand for client-side game state
+- **UI**: Tailwind CSS 4 + shadcn/ui
+- **Testing**: Vitest (engine) + Playwright (E2E)
+
+## Key Packages
+
+- `@viridian/engine` — Deterministic simulation engine, shared between server and client
+- `apps/web` — Next.js frontend, GM dashboard
+
+## Core Principle: Emergent Systems
+
+Everything interesting in the game is produced by independent systems reacting to events on the event bus. Nothing is hardcoded or scripted.
