@@ -10,8 +10,29 @@ export {
   chance,
   normalRandom,
   clamp,
+  calculateTeamStrength,
+  simulateGame,
+  generateSchedule,
+  generatePlayoffSchedule,
+  seedPlayoffTeams,
+  simulatePlayoffRound,
 } from './sim/index.js';
-export type { RNG } from './sim/index.js';
+export type {
+  RNG,
+  TeamStrength,
+  GameSimOptions,
+  GameResult,
+  PlayByPlayEntry,
+  PlayerStatLine,
+  GameInjury,
+  Weather,
+  PlayoffBracket,
+  PlayoffSeed,
+  PlayoffRoundResult,
+  PlayoffGameResult,
+  PlayoffRoundName,
+  PlayoffMatchup,
+} from './sim/index.js';
 
 export type {
   TeamId,
@@ -33,3 +54,5 @@ export {
   userId,
   contractId,
 } from './types/index.js';
+
+export { CalendarEngine } from './calendar/index.js';
