@@ -1,86 +1,94 @@
-# Next Step: Single-Agent Development Prompt
+# Next Step: Phase 3 — AI GM System (Single Agent)
 
-**From now on we use only one agent at a time — no parallel multi-agent work.**
-
-Copy the prompt below into a single Cursor Agent chat and run it to completion.
+**Use only one agent at a time. Copy the prompt below into a single Cursor Agent chat and run it to completion.**
 
 ---
 
 ## Prompt (copy everything below this line)
 
-You are working on Viridian Football, a pro football GM simulation game. This is a **single-agent** task: complete it fully before any other development. Do not split work across multiple agents.
+You are working on Viridian Football. This is a **single-agent** task. Complete it fully before any other development.
 
 **CRITICAL DESIGN PRINCIPLES**
-1. The user is the GM only — never the coach. Depth chart, play calling, and game plan are coach AI only (see `.cursor/rules/gm-only-scope.mdc`).
-2. No hardcoded events. All behaviour emerges from the event bus and system interactions (see `.cursor/rules/zero-hardcoded-events.mdc`).
-3. Use the deterministic RNG (`createLCG` from `packages/engine/src/sim/RNG.ts`) for all randomness. Never use `Math.random()`.
-4. Follow existing patterns in `packages/engine/src/orchestrator/SeasonOrchestrator.ts` and the Phase 2 modules (draft, trade, roster, analytics).
+1. The user is the GM only; coach duties (depth chart, play calling) are coach AI only. See `.cursor/rules/gm-only-scope.mdc`.
+2. No hardcoded events; all behaviour via event bus and conditions. See `.cursor/rules/zero-hardcoded-events.mdc`.
+3. Use deterministic RNG (`createLCG` from `packages/engine/src/sim/RNG.ts`) for all randomness. Never `Math.random()`.
 
-**YOUR TASK: Integrate Phase 2 modules into the SeasonOrchestrator so the full NFL calendar drives draft, free agency, coaching carousel, and roster operations.**
+**YOUR TASK: Implement the AI GM system so that AI-controlled teams make distinct, archetype-driven decisions for trades, draft, free agency, and coaching hires.**
 
-Right now, `advanceWeek()` only handles **game phases** (simulate games, injury recovery, morale, locker room). Offseason phases like `combine`, `draft`, `free_agency`, `coaching_carousel`, `post_draft`, `training_camp`, and `roster_cuts` do not yet run the corresponding Phase 2 logic. Your job is to wire them.
+The types are already defined in `packages/engine/src/types/ai.ts`: `GmArchetype`, `GmArchetypeName`, `GmDecisionWeights`, `GmTendencies`, `AiDecisionContext`, `AiAction`, `IAiGmEngine`. You must implement the engine that satisfies `IAiGmEngine` and wires it to existing Phase 2 modules.
 
 **Read these first (in order):**
 1. `.cursor/rules/project-overview.mdc` and `.cursor/rules/gm-only-scope.mdc`
-2. `packages/engine/src/orchestrator/SeasonOrchestrator.ts` — full file (advanceWeek, processOffseason, phase handling)
-3. `packages/engine/src/calendar/Calendar.ts` — phase definitions and week ranges (e.g. combine = week 5, draft = weeks 10–12, free_agency = 8–9, coaching_carousel = 2–3)
-4. `packages/engine/src/types/league.ts` — `LeaguePhase`, `League` (teams, players, coaches, draftPicks, draftProspects, contracts)
-5. Phase 2 module APIs:
-   - `packages/engine/src/draft/index.ts` — `DraftEngine`, `generateDraftClass`, `runCombine`, `executePick`, `executeUDFASignings`, etc.
-   - `packages/engine/src/roster/index.ts` — `FreeAgencyEngine`, `CoachingHireEngine`, `TrainingCamp`, `RosterManager`, etc.
-   - `packages/engine/src/trade/index.ts` — `TradeEngine` (for validating/executing trades during season)
-   - `packages/engine/src/analytics/index.ts` — `AnalyticsDepartment` (tier/noise if needed for scouting)
+2. `packages/engine/src/types/ai.ts` — full file (archetypes, context, actions, interface)
+3. `packages/engine/src/types/league.ts` — League, Team, standings
+4. `packages/engine/src/types/team.ts` — Team, OwnerProfile, TeamRecord
+5. Existing modules the AI will call:
+   - `packages/engine/src/trade/TradeNegotiation.ts` — `generateCounterOffer`, `evaluateFromTeamPerspective`
+   - `packages/engine/src/trade/TradeValuation.ts` — `getPlayerTradeValue`, `getPickTradeValue`, `computeFairnessScore`
+   - `packages/engine/src/trade/TradeValidator.ts` — `validateTradeLegality`
+   - `packages/engine/src/draft/DraftEngine.ts` and `DraftBoard.ts` — draft board generation, pick value
+   - `packages/engine/src/roster/RosterNeedAnalyzer.ts` — `analyzeRosterNeeds`
+   - `packages/engine/src/roster/CoachingHireEngine.ts` — `evaluateCoachPerformance`, `generateCandidatePool`, `conductInterview`, hire/fire
+   - `packages/engine/src/roster/FreeAgencyEngine.ts` — market value, demands, comp pick eligibility (for AI FA decisions)
+   - `packages/engine/src/cap/CapEngine.ts` — cap space, compliance
+   - `packages/engine/src/analytics/AnalyticsDepartment.ts` — tier/noise if needed for AI “scouting” preference
 
 **What to implement**
 
-1. **Phase-driven advance**
-   - In `SeasonOrchestrator.advanceWeek()`, after determining `currentEvent.phase`, branch on phase and run the appropriate Phase 2 logic when the calendar is in an offseason phase. Keep existing behaviour for game phases (sim games, injury recovery, morale, locker room).
-   - Ensure the league state is mutated in a way that matches the engine’s expectations (e.g. `league.draftProspects` exists and is populated for the draft; contracts/roster updated after FA and draft).
+1. **Archetype definitions** (`packages/engine/src/ai/archetypes.ts` or similar)
+   - Define the five archetypes: `analytics_architect`, `culture_commander`, `strategic_rebuilder`, `player_centric`, `aggressive_dealmaker`.
+   - Each has: `name`, `displayName`, `description`, `weights` (GmDecisionWeights), `tendencies` (GmTendencies), `signatureMoves` (string[]).
+   - Weights must differ meaningfully: e.g. Analytics Architect high `analyticsReliance` and `compPickAwareness`; Culture Commander high `cultureWeight`; Strategic Rebuilder high `draftPriority` and `youthBias`; Aggressive Dealmaker high `tradeAggression` and `freeAgencyAggression`; Player-Centric high `cultureWeight` and lower `riskTolerance`.
+   - Tendencies: e.g. rebuild/contend thresholds, coach firing patience, draft trade-up/down frequency, franchise tag usage. Make each archetype feel distinct.
 
-2. **Coaching carousel** (phases `offseason_start`, `coaching_carousel`)
-   - On the first week of `coaching_carousel` (or at end of `offseason_start`): use `CoachingHireEngine` to evaluate which coaches should be fired (e.g. from `processCoachEvaluations` or equivalent), then run the coaching carousel (fire underperformers, generate candidate pool, hire new HCs/coordinators). Update `league.coaches` and team `headCoachId` / coaching staff. Emit `COACH_FIRED` / `COACH_HIRED` / `SCHEME_CHANGED` via the orchestrator’s event bus where the Phase 2 code already does so; if not, add minimal emission so listeners stay consistent.
+2. **Team state evaluation** (`packages/engine/src/ai/AiGmEngine.ts` or similar)
+   - `evaluateTeamState(teamId: TeamId): AiDecisionContext`:
+     - Load team, roster, record, cap space (via CapEngine), draft pick count, owner pressure (from OwnerProfile or a simple heuristic), roster needs (via RosterNeedAnalyzer).
+     - Determine `mode`: `rebuild` | `retool` | `contend` | `dynasty` from record and archetype tendencies (e.g. compare wins/losses to `rebuildThreshold` and `contendThreshold`).
+     - Return full `AiDecisionContext` with the team’s assigned archetype (see below).
 
-3. **Combine** (phase `combine`)
-   - When phase is `combine`: if `league.draftProspects` is empty for the upcoming draft class, call `generateDraftClass(league.season + 1, seed)` and set `league.draftProspects`. Then run the combine (e.g. `runCombine(prospects, seed)`) and update each prospect’s scouting report / combine results in league state. Use the orchestrator’s RNG seed (e.g. `league.seed + season * 10000 + week`) so behaviour is deterministic.
+3. **Archetype assignment**
+   - Each team must have an assigned archetype. Either:
+     - Store it on the team (e.g. add `gmArchetype: GmArchetypeName` to the Team type and set it in LeagueGenerator for new leagues), or
+     - Derive it deterministically from team id/seed so the same team always has the same archetype.
+   - Implement `getArchetype(teamId: TeamId): GmArchetype` (return the full archetype object for that team).
 
-4. **Free agency** (phases `free_agency_tampering`, `free_agency`)
-   - When phase is `free_agency` (and optionally tampering): build the FA pool from expired contracts and released players (from league state), then call the free agency engine to simulate the market (e.g. `conductFreeAgency(...)`). Update `league.players` (teamId, contract), `league.contracts`, and team rosters. Emit `CONTRACT_SIGNED` for each signing. Respect league salary cap and roster limits; the Phase 2 `FreeAgencyEngine` and `CapEngine` should be used for compliance.
+4. **Decision engine** — `decideAction(context: AiDecisionContext): AiAction`
+   - Given context (team, mode, cap, needs, draft picks, owner pressure), choose one action per call. Use the archetype’s weights and tendencies to drive the choice.
+   - Possible actions: `propose_trade`, `evaluate_trade`, `sign_free_agent`, `release_player`, `draft_player`, `hire_coach`, `fire_coach`, `restructure_contract`, `franchise_tag`, `invest_analytics`, `no_action`.
+   - Logic examples (must be archetype-aware and use RNG for variety):
+     - Rebuild mode + high draft priority → more likely to consider trading down or accumulating picks; contend mode → more likely to sign FA or trade for win-now player.
+     - High comp pick awareness → factor in comp pick value when deciding whether to sign or let a FA walk.
+     - Culture Commander → prefer players with strong character grades; Aggressive Dealmaker → more likely to propose trades.
+   - Return a single `AiAction`. If no action is appropriate, return `{ kind: 'no_action', reason: string }`.
+   - All randomness via `createLCG(seed)`; seed can be derived from league seed + team id + season + week (or similar) so behaviour is deterministic.
 
-5. **Draft** (phase `draft`)
-   - When phase is `draft`: ensure draft order is set (from standings or existing `league.draftPicks`). For each pick (or for a “simulate full draft” path), either:
-     - Call the draft engine to execute the next pick (e.g. AI or BPA from draft board), update `league.draftPicks`, `league.players` (add drafted player to team, set draftYear/draftRound/draftPick), remove player from `league.draftProspects`, and emit `PLAYER_DRAFTED`; or
-     - Leave a clear hook (e.g. `getDraftState()`, `executeDraftPick(teamId, prospectId)`) so the UI can drive picks later, and for “auto-advance” run a simple AI draft (e.g. each team picks BPA from their board). You choose one approach and document it.
-   - After the draft (e.g. when moving to `post_draft`): run UDFA signings (e.g. `executeUDFASignings`), update rosters and contracts, and emit events as in the draft module.
+5. **Trade evaluation** — `evaluateTradeOffer(teamId: TeamId, proposal: TradeProposal): boolean`
+   - Use `TradeValuation` (fairness score, surplus value) and `TradeValidator` (legality). Consider archetype: Aggressive Dealmaker may accept slightly unfair deals; Analytics Architect may reject unless value is clearly positive. Return true/false for accept/reject. Use deterministic RNG for any tie-breaking.
 
-6. **Post-draft / UDFA** (phase `post_draft`)
-   - Run UDFA signings if not already done at end of draft. Update `league.players`, `league.contracts`, and team rosters.
+6. **Draft board** — `generateDraftBoard(teamId: TeamId): PlayerId[]`
+   - Build the team’s draft board: get roster needs (RosterNeedAnalyzer), get draft prospects (from league), get scouting reports and scheme fit data, then call `generateTeamBoard` (or equivalent) with **archetype-specific weights** (e.g. Analytics Architect weights scouting/analytics higher; Culture Commander weights character; Strategic Rebuilder weights need and youth). Return ordered list of `PlayerId` (prospect ids) by board rank.
 
-7. **Training camp / roster cuts** (phases `training_camp`, `roster_cuts`)
-   - When phase is `roster_cuts`: run training camp evaluation (e.g. `TrainingCamp.simulateTrainingCamp` or equivalent) and then apply 90→53 cuts. Use existing `delegateTrainingCampCuts` when delegation is set; otherwise use the training camp module’s cut recommendations. Update team rosters and any IR/PS moves via `RosterManager`. Emit `PLAYER_RELEASED` where appropriate.
+7. **Coaching hire priority** — `prioritizeCoachingHire(teamId: TeamId): CoachId[]`
+   - When the team needs to hire a coach (e.g. after firing), generate candidate pool (CoachingHireEngine), then rank candidates by archetype: e.g. Analytics Architect prefers innovative scheme fit; Culture Commander prefers experience and leadership. Return ordered list of `CoachId` (best first). Use existing interview/evaluation data if available.
 
-8. **Trade deadline** (phase `trade_deadline`)
-   - No new simulation required here; the phase simply marks the deadline. Optionally ensure `TradeValidator` / trade engine is used elsewhere so that trades after this week are rejected. If the trade module already enforces deadline via calendar, document it; otherwise add a check when evaluating trades that uses `league.week` and the calendar’s trade_deadline week.
+8. **Module layout**
+   - Create `packages/engine/src/ai/` (or reuse if stubbed): e.g. `archetypes.ts`, `AiGmEngine.ts`, `decisionEngine.ts`, `index.ts`. Export a class that implements `IAiGmEngine` and the archetype list. Do not break existing Phase 2 APIs; the AI only calls them.
 
-9. **Conditional pick resolution**
-   - When the season ends (e.g. after `super_bowl` or at start of offseason), call the draft module’s conditional pick resolver (e.g. `resolveConditions(league.draftPicks, seasonData)`) so that pick conditions (Pro Bowl, snap %, etc.) are resolved and `resolvedRound` is set. Use `league` (standings, player stats, awards) to build the minimal `seasonData` required by the resolver.
-
-10. **Orchestrator result types**
-   - Extend `WeekAdvanceResult` (and if needed `OffseasonResult`) to include Phase 2 outcomes where useful for the UI: e.g. `draftPicksMade`, `freeAgentSignings`, `coachingChanges`, `rosterCutCount`, or a generic `phaseOutcomes: Record<string, unknown>`. Keep the types in `SeasonOrchestrator.ts` or a shared types file.
+9. **Integration**
+   - Export the AI GM engine and archetypes from `packages/engine/src/index.ts` so the orchestrator or game layer can call it (e.g. for “AI team on the clock” during draft, or “AI evaluates trade offer”).
+   - Optional: in `SeasonOrchestrator`, when advancing a phase that requires an AI decision (e.g. draft pick for an AI team), call the AI GM’s `generateDraftBoard` and then `decideAction` or a dedicated “execute next draft pick for team” that uses the board. Only add this if it fits the current orchestrator design; otherwise leave a clear hook for the application layer to call the AI.
 
 **Constraints**
-- Do not change the Phase 2 module public APIs unnecessarily; call them from the orchestrator with the league state and a deterministic seed.
-- Do not add new engine packages; only orchestration and minimal helpers.
-- Ensure that after each advance, `league.week` (and any `league.phase` if stored) is updated so the next advance sees the correct phase.
-- If the league type does not yet have `draftProspects` or `draftPicks`, add them to the type and ensure `LeagueGenerator` or another path initializes them for a new league; document any assumptions.
+- Do not change the existing Phase 2 module public APIs in a breaking way. The AI is a consumer of those APIs.
+- If the League or Team type does not have a field for archetype, add a minimal one (e.g. `gmArchetype?: GmArchetypeName` on Team) and set it in league generation or in the AI module from a deterministic seed.
+- All AI decisions must be deterministic given the same league state and seed.
 
 **Testing**
-- Add or extend integration tests in `packages/engine/tests/integration/` to cover:
-  - Advancing through at least one full offseason: coaching_carousel → combine → free_agency → draft → post_draft → training_camp → roster_cuts, and verifying league state (roster counts, draftProspects reduced after draft, contracts updated after FA).
-  - Conditional pick resolution at season end with mock season data.
-  - Determinism: same seed produces the same sequence of phase outcomes when advancing through the same phases.
-- Run the full engine test suite and fix any regressions: `cd packages/engine && npm run typecheck && npx vitest run`.
+- Add unit tests for: archetype definitions (each has distinct weights/tendencies), `evaluateTeamState` (mode is set correctly from record and thresholds), `decideAction` (returns valid action and respects archetype), `evaluateTradeOffer` (accept/reject consistent with fairness and archetype), `generateDraftBoard` (returns ordered list, length matches available prospects), `prioritizeCoachingHire` (returns list of candidate ids).
+- Add at least one integration-style test: create a league with multiple teams, assign archetypes, call `evaluateTeamState` and `decideAction` for each; verify no crashes and that different archetypes can produce different actions.
+- Run: `cd packages/engine && npm run typecheck && npx vitest run`.
 
 **When you are done**
 - Run from repo root: `npm run typecheck && npm run test`.
-- Summarize what you implemented: which phases now run which Phase 2 logic, and any hooks left for the UI (e.g. draft pick selection).
-- Do not start Phase 3 (AI GM) or Phase 4 (frontend); only this integration step.
+- Summarize what you implemented: which files, how archetypes differ, and how the orchestrator or app should call the AI (e.g. draft, trade, FA, coaching). Do not start Phase 4 (frontend) in this task.

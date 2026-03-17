@@ -119,3 +119,6 @@ export * from './analytics/index.js';
 // ── Orchestrator ────────────────────────────────────────────────────
 export { SeasonOrchestrator } from './orchestrator/index.js';
 export type { WeekAdvanceResult, OffseasonResult, OrchestratorConfig } from './orchestrator/index.js';
+
+// â”€â”€ AI GM â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+export { AiGmEngine, GM_ARCHETYPES, listArchetypes, getArchetypeByName } from './ai/index.js';
